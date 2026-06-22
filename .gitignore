@@ -1,0 +1,155 @@
+# --------------------
+
+# OS / Editor
+
+# --------------------
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+.idea/
+*.swp
+*.swo
+
+# --------------------
+
+# Environment / Secrets
+
+# --------------------
+
+.env
+.env.*
+!.env.example
+!.env.sample
+
+*.pem
+*.key
+*.crt
+*.p12
+
+# --------------------
+
+# Python / FastAPI
+
+# --------------------
+
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+.venv/
+venv/
+env/
+ENV/
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+*.log
+
+# Build / packaging
+
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Local database / runtime files
+
+*.sqlite
+*.sqlite3
+*.db
+instance/
+
+# Upload / generated files
+
+uploads/
+media/
+staticfiles/
+
+# --------------------
+
+# Node / React
+
+# --------------------
+
+node_modules/
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# React build outputs
+
+build/
+dist/
+out/
+
+# Vite / frontend cache
+
+.vite/
+.cache/
+.parcel-cache/
+
+# Test / coverage
+
+coverage/
+.nyc_output/
+
+# TypeScript
+
+*.tsbuildinfo
+
+# --------------------
+
+# Docker / Local infra
+
+# --------------------
+
+docker-compose.override.yml
+
+postgres-data/
+pgdata/
+data/postgres/
+data/db/
+
+# --------------------
+
+# Tooling
+
+# --------------------
+
+.envrc
+.direnv/
+
+# --------------------
+
+# Do NOT ignore these commonly committed files
+
+# --------------------
+
+# Dockerfile
+
+# docker-compose.yml
+
+# package-lock.json
+
+# yarn.lock
+
+# pnpm-lock.yaml
+
+# alembic/versions/
+
+# .env.example

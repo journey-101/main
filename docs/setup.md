@@ -1,4 +1,4 @@
-# Project GTRPGM – Environment Setup
+# Journey-101 – Environment Setup
 
 - 이 문서는 협업 문서와 의사결정 기록을 관리하기 위한 로컬 개발 환경 설정 방법을 안내합니다.
 - 본 레포지토리의 모든 변경 사항은 GitHub Flow를 기반으로 PR을 통해 반영됩니다.
@@ -120,8 +120,8 @@ Windows 사용자의 경우 **WSL2 사용을 권장**합니다.
 ### 6. 컨테이너 환경 (Container Environment)
 
 - **Docker / Docker Compose**
-  - 일부 레포에서 서비스 실행 및 테스트 환경 통합에 사용
-  - docs 레포에서는 필수 도구가 아님
+  - frontend, backend, PostgreSQL 개발 베이스라인 실행에 사용
+  - `docker compose up --build`로 전체 로컬 서비스를 실행
 
 ## 설치 스크립트
 
