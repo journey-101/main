@@ -17,3 +17,7 @@ check-worktree:
 # Show the current git worktree state.
 status:
     @git status --short
+
+fix-cache:
+    mkdir -p .cache/uv
+    chmod -R u+rwX .cache/uv
