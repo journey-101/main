@@ -33,9 +33,21 @@ const MOCK_PLACES: Place[] = [
 ];
 
 export function MapComponent() {
+  const [places, setPlaces] = useState<Place[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
-
   const [center, setCenter] = useState({ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng });
+
+  // 3. [단계 1] '오늘의 여행' 버튼 클릭 시 실행되는 함수 (추후 /place API 연동 지점)
+  const handleFetchPlaces = () => {
+    console.log("========================================");
+    console.log("[프론트엔드 액션] '오늘의 여행' 버튼 클릭됨");
+    console.log("[백엔드 API 연동 예정] [GET] /place 호출 시점입니다.");
+    console.log("========================================");
+
+    // 💡 지금은 백엔드가 없으므로, 준비해 둔 가상 DB 데이터를 상태에 주입하여 화면에 노출시킵니다.
+    // 추후: fetch('/place').then(res => res.json()).then(data => setPlaces(data))
+    setPlaces(MOCK_PLACES);
+  };
 
   const handleSelectPlace = (place: Place) => {
     setSelectedPlace(place);
@@ -52,6 +64,13 @@ export function MapComponent() {
     const centerLat = (CURRENT_LOCATION.lat + place.lat) / 2;
     const centerLng = (CURRENT_LOCATION.lng + place.lng) / 2;
     setCenter({ lat: centerLat, lng: centerLng });
+  };
+
+  // 5. 모든 상태를 처음으로 돌리는 초기화 함수
+  const handleReset = () => {
+    setPlaces([]);
+    setSelectedPlace(null);
+    setCenter({ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng });
   };
 
   return (
@@ -71,33 +90,51 @@ export function MapComponent() {
         display: "flex",
         gap: "10px",
         alignItems: "center"
-      }}>
-        <span style={{ fontSize: "13px", fontWeight: "bold", color: "#555" }}>목적지 목록:</span>
-        {MOCK_PLACES.map((place) => (
+      }}>{places.length === 0 ? (
           <button
-            key={place.id}
-            onClick={() => handleSelectPlace(place)}
+            onClick={handleFetchPlaces}
             style={{
-              padding: "8px 16px",
-              backgroundColor: selectedPlace?.id === place.id ? "#fee500" : "#fff",
-              color: "#333",
-              border: "1px solid #e0e0e0",
+              padding: "10px 20px",
+              backgroundColor: "#fee500", // 카카오 고유 시그니처 옐로우
+              color: "#222",
+              border: "none",
               borderRadius: "20px",
               cursor: "pointer",
               fontWeight: "bold",
-              fontSize: "13px"
+              fontSize: "14px"
             }}
           >
-            {place.name}
+            🚀 오늘의 여행 추천받기
           </button>
-        ))}
-        {selectedPlace && (
-          <button 
-            onClick={() => { setSelectedPlace(null); setCenter({ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng }); }}
-            style={{ padding: "8px 12px", backgroundColor: "#eee", border: "none", borderRadius: "20px", cursor: "pointer", fontSize: "12px", color: "#333" }}
-          >
-            초기화
-          </button>
+        ) : (
+          // 💡 [순서 반영] '오늘의 여행'을 눌러 데이터가 채워지면 아래의 장소 목록 버튼들이 나타납니다.
+          <>
+            <span style={{ fontSize: "13px", fontWeight: "bold", color: "#555" }}>목적지 선택:</span>
+            {places.map((place) => (
+              <button
+                key={place.id}
+                onClick={() => handleSelectPlace(place)}
+                style={{
+                  padding: "8px 16px",
+                  backgroundColor: selectedPlace?.id === place.id ? "#ff5656" : "#fff",
+                  color: selectedPlace?.id === place.id ? "#fff" : "#333",
+                  border: "1px solid #e0e0e0",
+                  borderRadius: "20px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                  fontSize: "13px"
+                }}
+              >
+                {place.name}
+              </button>
+            ))}
+            <button 
+              onClick={handleReset}
+              style={{ padding: "8px 12px", backgroundColor: "#eee", border: "none", borderRadius: "20px", cursor: "pointer", fontSize: "12px", color: "#333" }}
+            >
+              닫기
+            </button>
+          </>
         )}
       </div>
 
