@@ -124,16 +124,6 @@ export function MapComponent() {
           <div style={{ padding: "5px", color: "#000", fontWeight: "bold", fontSize: "12px" }}>출발: 서울시청</div>
         </MapMarker>
 
-        {/* 목적지 목록 마커 렌더링 */}
-        {MOCK_DESTINATIONS.map((dest) => (
-          <MapMarker 
-            key={dest.id} 
-            position={{ lat: dest.lat, lng: dest.lng }}
-          >
-            <div style={{ padding: "5px", color: "#333", fontSize: "12px" }}>{dest.name}</div>
-          </MapMarker>
-        ))}
-
         {/* 💡 도보 추천 경로선 그리기 구문 위치 조율 */}
         {selectedDest !== null && (
           <Polyline
