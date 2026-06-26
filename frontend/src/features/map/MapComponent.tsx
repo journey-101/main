@@ -1,6 +1,12 @@
 import React, { useState } from "react";
 import { Map, MapMarker, Polyline } from "react-kakao-maps-sdk";
 
+declare global {
+  interface Window {
+    kakao: any;
+  }
+}
+
 interface Place {
   id: number;
   name: string;
