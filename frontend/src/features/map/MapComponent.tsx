@@ -67,7 +67,7 @@ export function MapComponent() {
   };
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100vh" }}>
+    <div style={{ position: "relative", width: "100%", height: "600px" }}>
       
       {/* 상단 장소 선택 버튼 바 */}
       <div style={{
