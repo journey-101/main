@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Map, MapMarker, Polyline } from "react-kakao-maps-sdk";
 
 declare global {
@@ -21,18 +21,21 @@ const MOCK_PLACES: Place[] = [
   { 
     id: 1, 
     name: "덕수궁", 
+    address: "서울 중구 세종대로 99",
     lat: 37.5658, 
     lng: 126.9751
   },
   { 
     id: 2, 
     name: "광화문광장", 
+    address: "서울 종로구 세종대로 172",
     lat: 37.5724, 
     lng: 126.9769
   },
   { 
     id: 3, 
     name: "명동성당", 
+    address: "서울 중구 명동길 74",
     lat: 37.5632, 
     lng: 126.9874
   },
@@ -171,7 +174,7 @@ export function MapComponent() {
           <Polyline
             path={[
                 {lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng},
-                {lat: selectedPlace.lat, lng: selectedPlace.lat}
+                {lat: selectedPlace.lat, lng: selectedPlace.lng}
             ]}
             strokeWeight={6}
             strokeColor={"#ff5656"}
