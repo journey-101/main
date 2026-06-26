@@ -113,9 +113,12 @@ export function MapComponent() {
         </MapMarker>
 
         {/* 💡 도보 추천 경로선 그리기 구문 위치 조율 */}
-        {selectedDest !== null && (
+        {selectedPlace !== null && (
           <Polyline
-            path={selectedDest.path}
+            path={[
+                {lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng},
+                {lat: selectedPlace.lat, lng: selectedPlace.lat}
+            ]}
             strokeWeight={6}
             strokeColor={"#ff5656"}
             strokeOpacity={0.85}
