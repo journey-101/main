@@ -60,8 +60,7 @@ const MOCK_DESTINATIONS: Destination[] = [
 export function MapComponent() {
   // 4. State 타입 명시 (Destination 또는 null)
   const [selectedDest, setSelectedDest] = useState<Destination | null>(null);
-  const [mapCenter, setMapCenter] = useState({ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng });
-  const [mapLevel, setMapLevel] = useState(4);
+  const [center, setMapCenter] = useState({ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng });
 
   const [pathUrl, setPathUrl] = useState<string | null>(null);
 
@@ -131,22 +130,22 @@ export function MapComponent() {
 
       {/* 카카오맵 렌더링 영역 */}
       <Map
-        center={mapCenter}
+        center={center}
         style={{ width: "100%", height: "100%" }}
-        level={mapLevel}
+        level={4}
       >
         {/* 현위치 마커 (서울시청) */}
         <MapMarker position={{ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng }}>
           <div style={{ padding: "5px", color: "#000", fontWeight: "bold" }}>내 현위치</div>
         </MapMarker>
 
-        {selectedDest && (
+        {selectedDest !== null && (
           <Polyline
-            path={selectedDest.path} // 선택된 장소의 좌표 배열 연동
-            strokeWeight={6}         // 도보 가이드라인 두께
-            strokeColor={"#ff5656"}   // 도보 선 색상 (빨간색)
-            strokeOpacity={0.85}      // 선 투명도
-            strokeStyle={"solid"}     // 선 스타일
+            path={selectedDest.path}
+            strokeWeight={6}
+            strokeColor={"#ff5656"}
+            strokeOpacity={0.85}
+            strokeStyle={"solid"}
           />
         )}
       </Map>
