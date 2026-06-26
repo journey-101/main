@@ -32,7 +32,9 @@ class ApiClient:
         payload: dict[str, Any],
         expected_status: int = 200,
     ) -> dict[str, Any]:
-        return self.request("POST", path, payload=payload, expected_status=expected_status)
+        return self.request(
+            "POST", path, payload=payload, expected_status=expected_status
+        )
 
     def patch(
         self,
@@ -41,7 +43,9 @@ class ApiClient:
         payload: dict[str, Any],
         expected_status: int = 200,
     ) -> dict[str, Any]:
-        return self.request("PATCH", path, payload=payload, expected_status=expected_status)
+        return self.request(
+            "PATCH", path, payload=payload, expected_status=expected_status
+        )
 
     def request(
         self,
@@ -82,7 +86,9 @@ class ApiClient:
         try:
             data = json.loads(response_body)
         except json.JSONDecodeError as exc:
-            raise ApiError(f"{method} {url} returned invalid JSON: {response_body}") from exc
+            raise ApiError(
+                f"{method} {url} returned invalid JSON: {response_body}"
+            ) from exc
 
         return data
 

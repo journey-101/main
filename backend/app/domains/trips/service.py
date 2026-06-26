@@ -15,12 +15,17 @@ from app.domains.trips.schemas import (
 
 
 def list_user_trips(session: Session, user_id: UUID) -> list[TripListItemData]:
-    return [_map_trip_list_item(row) for row in repository.list_trips_by_user(session, user_id)]
+    return [
+        _map_trip_list_item(row)
+        for row in repository.list_trips_by_user(session, user_id)
+    ]
 
 
 def create_trip(session: Session, user_id: UUID, title: str) -> TripListItemData:
     if repository.get_user(session, user_id) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
 
     trip, attempt = repository.create_trip_with_attempt(session, user_id, title)
     return TripListItemData(
@@ -34,7 +39,9 @@ def create_trip(session: Session, user_id: UUID, title: str) -> TripListItemData
 def get_trip_detail(session: Session, trip_id: UUID) -> TripDetailData:
     trip = repository.get_trip(session, trip_id)
     if trip is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
+        )
 
     attempts = repository.get_trip_attempts(session, trip_id)
     return TripDetailData(
@@ -52,11 +59,15 @@ def update_trip(
 ) -> TripListItemData:
     trip = repository.get_trip(session, trip_id)
     if trip is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
+        )
 
     updated_trip = repository.update_trip_title(session, trip_id, title)
     if updated_trip is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
+        )
 
     current_attempt = repository.get_current_trip_attempt(session, trip_id)
 
@@ -79,9 +90,13 @@ def create_trip_attempt(
 ) -> TripAttemptMutationData:
     trip = repository.get_trip(session, trip_id)
     if trip is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
+        )
 
-    return _map_attempt_mutation(repository.create_trip_attempt(session, trip_id, attempt_status))
+    return _map_attempt_mutation(
+        repository.create_trip_attempt(session, trip_id, attempt_status)
+    )
 
 
 def update_trip_attempt(
@@ -93,7 +108,9 @@ def update_trip_attempt(
 ) -> TripAttemptMutationData:
     trip = repository.get_trip(session, trip_id)
     if trip is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
+        )
 
     attempt = repository.update_trip_attempt(
         session,

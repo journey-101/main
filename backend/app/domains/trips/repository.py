@@ -91,7 +91,9 @@ def get_current_trip_attempt(session: Session, trip_id: UUID) -> RowMapping | No
     return result.mappings().one_or_none()
 
 
-def get_trip_attempt(session: Session, trip_id: UUID, attempt_id: UUID) -> RowMapping | None:
+def get_trip_attempt(
+    session: Session, trip_id: UUID, attempt_id: UUID
+) -> RowMapping | None:
     result = session.execute(
         text(
             """

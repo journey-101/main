@@ -51,13 +51,21 @@ def run_flow(client: ApiClient, data_dir: Path, run_id: str) -> None:
     )
     trip_id = created_trip["id"]
     assert_equal(created_trip["user_id"], user_id, "created trip user_id")
-    assert_equal(created_trip["title"], create_trip_payload["title"], "created trip title")
-    assert_equal(created_trip["current_attempt"]["status"], "started", "default attempt status")
+    assert_equal(
+        created_trip["title"], create_trip_payload["title"], "created trip title"
+    )
+    assert_equal(
+        created_trip["current_attempt"]["status"], "started", "default attempt status"
+    )
 
     print("[step] confirm trip in list")
-    listed_trips = expect_success(client.get("/api/v1/trips", query={"user_id": user_id}))
+    listed_trips = expect_success(
+        client.get("/api/v1/trips", query={"user_id": user_id})
+    )
     matching_trip = find_by_id(listed_trips, trip_id)
-    assert_equal(matching_trip["title"], create_trip_payload["title"], "listed trip title")
+    assert_equal(
+        matching_trip["title"], create_trip_payload["title"], "listed trip title"
+    )
 
     print("[step] load trip detail")
     trip_detail = expect_success(client.get(f"/api/v1/trips/{trip_id}"))
@@ -78,12 +86,20 @@ def run_flow(client: ApiClient, data_dir: Path, run_id: str) -> None:
     )
     attempt_id = created_attempt["id"]
     assert_equal(created_attempt["trip_id"], trip_id, "created attempt trip_id")
-    assert_equal(created_attempt["status"], create_attempt_payload["status"], "created attempt status")
+    assert_equal(
+        created_attempt["status"],
+        create_attempt_payload["status"],
+        "created attempt status",
+    )
 
     print("[step] confirm attempt in trip detail")
     trip_detail = expect_success(client.get(f"/api/v1/trips/{trip_id}"))
     matching_attempt = find_by_id(trip_detail["attempts"], attempt_id)
-    assert_equal(matching_attempt["status"], create_attempt_payload["status"], "detail attempt status")
+    assert_equal(
+        matching_attempt["status"],
+        create_attempt_payload["status"],
+        "detail attempt status",
+    )
 
     print("[step] update attempt feedback")
     update_feedback_payload = load_payload(data_dir, "update_feedback.json", context)

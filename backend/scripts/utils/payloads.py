@@ -5,7 +5,9 @@ from pathlib import Path
 from typing import Any
 
 
-def load_payload(data_dir: Path, filename: str, context: dict[str, str]) -> dict[str, Any]:
+def load_payload(
+    data_dir: Path, filename: str, context: dict[str, str]
+) -> dict[str, Any]:
     path = data_dir / filename
     with path.open(encoding="utf-8") as payload_file:
         payload = json.load(payload_file)

@@ -52,13 +52,19 @@ def client() -> Generator[TestClient, None, None]:
                 """
             )
         )
-        connection.execute(text("insert into app_users (id) values (:id)"), {"id": USER_ID})
         connection.execute(
-            text("insert into trips (id, user_id, title) values (:id, :user_id, :title)"),
+            text("insert into app_users (id) values (:id)"), {"id": USER_ID}
+        )
+        connection.execute(
+            text(
+                "insert into trips (id, user_id, title) values (:id, :user_id, :title)"
+            ),
             {"id": TRIP_ID, "user_id": USER_ID, "title": "북촌 산책"},
         )
         connection.execute(
-            text("insert into trips (id, user_id, title) values (:id, :user_id, :title)"),
+            text(
+                "insert into trips (id, user_id, title) values (:id, :user_id, :title)"
+            ),
             {"id": OTHER_TRIP_ID, "user_id": USER_ID, "title": "성수 탐방"},
         )
         connection.execute(
@@ -221,7 +227,9 @@ def test_patch_trip_attempt_updates_status(client: TestClient) -> None:
     assert data["feedback_text"] is None
 
 
-def test_patch_trip_attempt_updates_status_and_feedback_text(client: TestClient) -> None:
+def test_patch_trip_attempt_updates_status_and_feedback_text(
+    client: TestClient,
+) -> None:
     response = client.patch(
         f"/api/v1/trips/{TRIP_ID}/attempts/{ATTEMPT_ID}",
         json={"status": "completed", "feedback_text": "완료했다."},
@@ -233,7 +241,9 @@ def test_patch_trip_attempt_updates_status_and_feedback_text(client: TestClient)
     assert data["feedback_text"] == "완료했다."
 
 
-def test_patch_trip_attempt_feedback_updates_feedback_text_only(client: TestClient) -> None:
+def test_patch_trip_attempt_feedback_updates_feedback_text_only(
+    client: TestClient,
+) -> None:
     response = client.patch(
         f"/api/v1/trips/{TRIP_ID}/attempts/{ATTEMPT_ID}/feedback",
         json={"feedback_text": "피드백만 수정했다."},
@@ -265,7 +275,9 @@ def test_invalid_trip_id_returns_validation_error(client: TestClient) -> None:
     assert response.status_code == 422
 
 
-def test_invalid_attempt_feedback_body_returns_validation_error(client: TestClient) -> None:
+def test_invalid_attempt_feedback_body_returns_validation_error(
+    client: TestClient,
+) -> None:
     response = client.patch(
         f"/api/v1/trips/{TRIP_ID}/attempts/{ATTEMPT_ID}",
         json={"feedback_text": 123},
@@ -274,7 +286,9 @@ def test_invalid_attempt_feedback_body_returns_validation_error(client: TestClie
     assert response.status_code == 422
 
 
-def test_invalid_feedback_only_body_returns_validation_error(client: TestClient) -> None:
+def test_invalid_feedback_only_body_returns_validation_error(
+    client: TestClient,
+) -> None:
     response = client.patch(
         f"/api/v1/trips/{TRIP_ID}/attempts/{ATTEMPT_ID}/feedback",
         json={"feedback_text": 123},
@@ -283,7 +297,9 @@ def test_invalid_feedback_only_body_returns_validation_error(client: TestClient)
     assert response.status_code == 422
 
 
-def test_missing_feedback_only_body_returns_validation_error(client: TestClient) -> None:
+def test_missing_feedback_only_body_returns_validation_error(
+    client: TestClient,
+) -> None:
     response = client.patch(
         f"/api/v1/trips/{TRIP_ID}/attempts/{ATTEMPT_ID}/feedback",
         json={},
@@ -316,7 +332,9 @@ def test_empty_attempt_patch_body_returns_validation_error(client: TestClient) -
     assert response.status_code == 422
 
 
-def test_invalid_attempt_patch_body_type_returns_validation_error(client: TestClient) -> None:
+def test_invalid_attempt_patch_body_type_returns_validation_error(
+    client: TestClient,
+) -> None:
     response = client.patch(
         f"/api/v1/trips/{TRIP_ID}/attempts/{ATTEMPT_ID}",
         json=["feedback"],
@@ -367,7 +385,9 @@ def test_patch_attempt_for_missing_trip_returns_not_found(client: TestClient) ->
     assert response.json() == {"detail": "Trip not found"}
 
 
-def test_patch_attempt_feedback_for_missing_trip_returns_not_found(client: TestClient) -> None:
+def test_patch_attempt_feedback_for_missing_trip_returns_not_found(
+    client: TestClient,
+) -> None:
     response = client.patch(
         f"/api/v1/trips/{uuid4()}/attempts/{ATTEMPT_ID}/feedback",
         json={"feedback_text": "없는 여행"},
@@ -407,7 +427,9 @@ def test_patch_attempt_for_different_trip_returns_not_found(client: TestClient) 
     assert response.json() == {"detail": "Trip attempt not found"}
 
 
-def test_patch_attempt_feedback_for_different_trip_returns_not_found(client: TestClient) -> None:
+def test_patch_attempt_feedback_for_different_trip_returns_not_found(
+    client: TestClient,
+) -> None:
     response = client.patch(
         f"/api/v1/trips/{TRIP_ID}/attempts/{OTHER_ATTEMPT_ID}/feedback",
         json={"feedback_text": "다른 여행 시도"},
