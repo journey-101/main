@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import { Map, MapMarker } from "react-kakao-maps-sdk";
+import { Map, MapMarker, Polyline } from "react-kakao-maps-sdk";
 
-// 1. 목적지 객체의 TypeScript 타입 정의
 interface Destination {
   id: number;
   name: string;
@@ -10,14 +9,8 @@ interface Destination {
   path: { lat: number; lng: number }[]; 
 }
 
-// 2. 임의의 사용자 현위치 고정 (서울시청)
-const CURRENT_LOCATION = {
-  name: "서울시청",
-  lat: 37.5665,
-  lng: 126.9780,
-};
+const CURRENT_LOCATION = { name: "서울시청", lat: 37.5665, lng: 126.9780 };
 
-// 3. 목적지 3개 목업 데이터
 const MOCK_DESTINATIONS: Destination[] = [
   { 
     id: 1, 
@@ -25,10 +18,10 @@ const MOCK_DESTINATIONS: Destination[] = [
     lat: 37.5658, 
     lng: 126.9751,
     path: [
-      { lat: 37.5665, lng: 126.9780 }, // 출발: 서울시청
-      { lat: 37.5662, lng: 126.9765 }, // 중간 꺾임점 1
-      { lat: 37.5659, lng: 126.9755 }, // 중간 꺾임점 2
-      { lat: 37.5658, lng: 126.9751 }  // 도착: 덕수궁 공식 좌표
+      { lat: 37.5665, lng: 126.9780 },
+      { lat: 37.5662, lng: 126.9765 },
+      { lat: 37.5659, lng: 126.9755 },
+      { lat: 37.5658, lng: 126.9751 }
     ]
   },
   { 
@@ -58,39 +51,32 @@ const MOCK_DESTINATIONS: Destination[] = [
 ];
 
 export function MapComponent() {
-  // 4. State 타입 명시 (Destination 또는 null)
   const [selectedDest, setSelectedDest] = useState<Destination | null>(null);
-  const [center, setMapCenter] = useState({ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng });
+  
+  // 💡 [해결 핵심] 지도의 중심 좌표 객체를 상수로 바로 넣지 않고, 별도 독립 상태로 분리하여 렌더링 충돌 방지
+  const [center, setCenter] = useState({ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng });
 
-  const [pathUrl, setPathUrl] = useState<string | null>(null);
-
-  // 5. 버튼 클릭 시 길찾기 URL을 생성
   const handleFindPath = (destination: Destination) => {
+    // 1. 선택된 목적지 데이터 할당
     setSelectedDest(destination);
 
+    // 2. 출발지와 목적지의 중간값 계산 후 지도의 중심축 이동 명령
     const centerLat = (CURRENT_LOCATION.lat + destination.lat) / 2;
     const centerLng = (CURRENT_LOCATION.lng + destination.lng) / 2;
-    setMapCenter({ lat: centerLat, lng: centerLng });
-    setMapLevel(4); // 경로가 잘 보이는 축척 레벨로 고정
-
-    // 카카오맵 공식 도보 길찾기 URL 패턴 생성
-    // const pathUrl = 'https://map.kakao.com/link/by/walk/${CURRENT_LOCATION.name},${CURRENT_LOCATION.lat},${CURRENT_LOCATION.lng}/${destination.name},${destination.lat},${destination.lng}';
-    
-    // URL 상태만 저장하여 내부 iframe으로 띄웁니다.
-    // setPathUrl(pathUrl);
+    setCenter({ lat: centerLat, lng: centerLng });
   };
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100vh" }}>
       
-      {/* 장소 선택 버튼 UI 레이아웃 */}
+      {/* 상단 장소 선택 버튼 바 */}
       <div style={{
         position: "absolute",
         top: "20px",
         left: "50%",
         transform: "translateX(-50%)",
         zIndex: 10,
-        backgroundColor: "rgba(255, 255, 255, 0.9)",
+        backgroundColor: "rgba(255, 255, 255, 0.95)",
         padding: "12px 20px",
         borderRadius: "30px",
         boxShadow: "0 4px 15px rgba(0,0,0,0.15)",
@@ -98,21 +84,20 @@ export function MapComponent() {
         gap: "10px",
         alignItems: "center"
       }}>
-        <span style={{ fontSize: "13px", fontWeight: "bold", color: "#555", marginRight: "5px" }}>도보 추천:</span>
+        <span style={{ fontSize: "13px", fontWeight: "bold", color: "#555" }}>도보 안내:</span>
         {MOCK_DESTINATIONS.map((dest) => (
           <button
             key={dest.id}
             onClick={() => handleFindPath(dest)}
             style={{
               padding: "8px 16px",
-              backgroundColor: selectedDest?.id === dest.id ? "#ff5656" : "#fff", // 선택 시 빨간색 경로 매칭
+              backgroundColor: selectedDest?.id === dest.id ? "#ff5656" : "#fff",
               color: selectedDest?.id === dest.id ? "#fff" : "#333",
               border: "1px solid #e0e0e0",
               borderRadius: "20px",
               cursor: "pointer",
               fontWeight: "bold",
-              fontSize: "13px",
-              transition: "all 0.2s"
+              fontSize: "13px"
             }}
           >
             {dest.name}
@@ -120,25 +105,36 @@ export function MapComponent() {
         ))}
         {selectedDest && (
           <button 
-            onClick={() => { setSelectedDest(null); setMapCenter({ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng }); }}
-            style={{ padding: "8px 12px", backgroundColor: "#eee", border: "none", borderRadius: "20px", cursor: "pointer", fontSize: "12px" }}
+            onClick={() => { setSelectedDest(null); setCenter({ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng }); }}
+            style={{ padding: "8px 12px", backgroundColor: "#eee", border: "none", borderRadius: "20px", cursor: "pointer", fontSize: "12px", color: "#333" }}
           >
             초기화
           </button>
         )}
       </div>
 
-      {/* 카카오맵 렌더링 영역 */}
+      {/* 카카오맵 엔진 */}
       <Map
-        center={center}
+        center={center} // 💡 상태 분리된 독립 center 변수 연동
         style={{ width: "100%", height: "100%" }}
         level={4}
       >
-        {/* 현위치 마커 (서울시청) */}
+        {/* 출발지 마커 */}
         <MapMarker position={{ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng }}>
-          <div style={{ padding: "5px", color: "#000", fontWeight: "bold" }}>내 현위치</div>
+          <div style={{ padding: "5px", color: "#000", fontWeight: "bold", fontSize: "12px" }}>출발: 서울시청</div>
         </MapMarker>
 
+        {/* 목적지 목록 마커 렌더링 */}
+        {MOCK_DESTINATIONS.map((dest) => (
+          <MapMarker 
+            key={dest.id} 
+            position={{ lat: dest.lat, lng: dest.lng }}
+          >
+            <div style={{ padding: "5px", color: "#333", fontSize: "12px" }}>{dest.name}</div>
+          </MapMarker>
+        ))}
+
+        {/* 💡 도보 추천 경로선 그리기 구문 위치 조율 */}
         {selectedDest !== null && (
           <Polyline
             path={selectedDest.path}
