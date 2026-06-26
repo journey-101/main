@@ -11,7 +11,7 @@ interface Place {
 
 const CURRENT_LOCATION = { name: "서울시청", lat: 37.5665, lng: 126.9780 };
 
-const MOCK_DESTINATIONS: Place[] = [
+const MOCK_PLACES: Place[] = [
   { 
     id: 1, 
     name: "덕수궁", 
