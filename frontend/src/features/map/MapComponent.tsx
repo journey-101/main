@@ -8,6 +8,7 @@ export function MapComponent() {
       style={{
         width: "400px",
         height: "500px", // 원하는 지도 높이 설정
+        zindex: 0
       }}
       level={3} // 지도 확대 레벨
     >
