@@ -32,7 +32,7 @@ export function MapComponent() {
     setSelectedDest(destination);
 
     // 카카오맵 공식 도보 길찾기 URL 패턴 생성
-    const pathUrl = `https://kakao.com{CURRENT_LOCATION.lat},${CURRENT_LOCATION.lng},${CURRENT_LOCATION.name}&ep=${destination.lat},${destination.lng},${destination.name}&by=FOOT`;
+    const pathUrl = `https://map.kakao.com/link/by/walk/${CURRENT_LOCATION.name},${CURRENT_LOCATION.lat},${CURRENT_LOCATION.lng}/${destination.name},${destination.lat},${destination.lng}';
     
     // 현재 창에서 바로 카카오맵 길찾기 모바일 페이지로 전환
     window.location.assign(pathUrl);
