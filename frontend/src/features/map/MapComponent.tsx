@@ -27,15 +27,17 @@ export function MapComponent() {
   // 4. State 타입 명시 (Destination 또는 null)
   const [selectedDest, setSelectedDest] = useState<Destination | null>(null);
 
-  // 5. 버튼 클릭 시 길찾기 URL을 생성하고 새 창 또는 현재 페이지로 이동
+  const [pathUrl, setPathUrl] = useState<string | null>(null);
+
+  // 5. 버튼 클릭 시 길찾기 URL을 생성
   const handleFindPath = (destination: Destination) => {
     setSelectedDest(destination);
 
     // 카카오맵 공식 도보 길찾기 URL 패턴 생성
     const pathUrl = 'https://map.kakao.com/link/by/walk/${CURRENT_LOCATION.name},${CURRENT_LOCATION.lat},${CURRENT_LOCATION.lng}/${destination.name},${destination.lat},${destination.lng}';
     
-    // 현재 창에서 바로 카카오맵 길찾기 모바일 페이지로 전환
-    window.location.assign(pathUrl);
+    // URL 상태만 저장하여 내부 iframe으로 띄웁니다.
+    setPathUrl(pathUrl);
   };
 
   return (
@@ -85,6 +87,20 @@ export function MapComponent() {
           <div style={{ padding: "5px", color: "#000", fontWeight: "bold" }}>내 현위치</div>
         </MapMarker>
       </Map>
+
+      {/* 💡 핵심: 길찾기 버튼을 눌렀을 때, 우리 웹뷰 내부에서 창이 튀어나오도록 구현 */}
+      {pathUrl && (
+        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 20, backgroundColor: "#fff" }}>
+          {/* 상단에 다시 장소 선택으로 돌아갈 수 있는 뒤로가기 바 배치 */}
+          <div style={{ width: "100%", height: "50px", backgroundColor: "#333", display: "flex", alignItems: "center", paddingLeft: "15px" }}>
+            <button onClick={() => { setPathUrl(null); setSelectedDest(null); }} style={{ backgroundColor: "#fff", border: "none", padding: "5px 10px", borderRadius: "3px", cursor: "pointer", fontWeight: "bold" }}>
+              ← 다시 장소 선택하기
+            </button>
+          </div>
+          {/* 우리 웹뷰 안에서 카카오 길찾기 화면만 안전하게 불러오기 */}
+          <iframe src={pathUrl} style={{ width: "100%", height: "calc(100% - 50px)", border: "none" }} title="카카오 도보 길찾기" />
+        </div>
+      )}
     </div>
   );
 }
