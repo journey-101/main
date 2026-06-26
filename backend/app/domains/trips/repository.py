@@ -91,6 +91,21 @@ def get_current_trip_attempt(session: Session, trip_id: UUID) -> RowMapping | No
     return result.mappings().one_or_none()
 
 
+def get_trip_attempt(session: Session, trip_id: UUID, attempt_id: UUID) -> RowMapping | None:
+    result = session.execute(
+        text(
+            """
+            select id, trip_id, status, feedback_text, created_at
+            from trip_attempts
+            where trip_id = :trip_id
+                and id = :attempt_id
+            """
+        ),
+        {"trip_id": str(trip_id), "attempt_id": str(attempt_id)},
+    )
+    return result.mappings().one_or_none()
+
+
 def create_trip_with_attempt(
     session: Session,
     user_id: UUID,
@@ -145,3 +160,70 @@ def update_trip_title(session: Session, trip_id: UUID, title: str) -> RowMapping
     )
     session.commit()
     return get_trip(session, trip_id)
+
+
+def create_trip_attempt(
+    session: Session,
+    trip_id: UUID,
+    status: TripAttemptStatus,
+) -> RowMapping:
+    attempt_id = uuid4()
+    session.execute(
+        text(
+            """
+            insert into trip_attempts (id, trip_id, status, feedback_text)
+            values (:attempt_id, :trip_id, :status, :feedback_text)
+            """
+        ),
+        {
+            "attempt_id": str(attempt_id),
+            "trip_id": str(trip_id),
+            "status": status.value,
+            "feedback_text": None,
+        },
+    )
+    session.commit()
+
+    attempt = get_trip_attempt(session, trip_id, attempt_id)
+    if attempt is None:
+        raise RuntimeError("Created trip attempt could not be loaded")
+    return attempt
+
+
+def update_trip_attempt(
+    session: Session,
+    trip_id: UUID,
+    attempt_id: UUID,
+    status: TripAttemptStatus | None,
+    feedback_text: str | None,
+) -> RowMapping | None:
+    assignments: list[str] = []
+    params: dict[str, str | None] = {
+        "trip_id": str(trip_id),
+        "attempt_id": str(attempt_id),
+    }
+    if status is not None:
+        assignments.append("status = :status")
+        params["status"] = status.value
+    if feedback_text is not None:
+        assignments.append("feedback_text = :feedback_text")
+        params["feedback_text"] = feedback_text
+
+    if not assignments:
+        return get_trip_attempt(session, trip_id, attempt_id)
+
+    result = session.execute(
+        text(
+            f"""
+            update trip_attempts
+            set {", ".join(assignments)}
+            where id = :attempt_id
+                and trip_id = :trip_id
+            """
+        ),
+        params,
+    )
+    session.commit()
+    if result.rowcount == 0:
+        return None
+    return get_trip_attempt(session, trip_id, attempt_id)

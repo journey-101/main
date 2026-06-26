@@ -7,6 +7,8 @@ from app.domains.trips import repository
 from app.domains.trips.schemas import (
     CurrentTripAttemptData,
     TripAttemptData,
+    TripAttemptMutationData,
+    TripAttemptStatus,
     TripDetailData,
     TripListItemData,
 )
@@ -70,6 +72,60 @@ def update_trip(
     )
 
 
+def create_trip_attempt(
+    session: Session,
+    trip_id: UUID,
+    attempt_status: TripAttemptStatus,
+) -> TripAttemptMutationData:
+    trip = repository.get_trip(session, trip_id)
+    if trip is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+
+    return _map_attempt_mutation(repository.create_trip_attempt(session, trip_id, attempt_status))
+
+
+def update_trip_attempt(
+    session: Session,
+    trip_id: UUID,
+    attempt_id: UUID,
+    attempt_status: TripAttemptStatus | None,
+    feedback_text: str | None,
+) -> TripAttemptMutationData:
+    trip = repository.get_trip(session, trip_id)
+    if trip is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+
+    attempt = repository.update_trip_attempt(
+        session,
+        trip_id,
+        attempt_id,
+        attempt_status,
+        feedback_text,
+    )
+    if attempt is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Trip attempt not found",
+        )
+
+    return _map_attempt_mutation(attempt)
+
+
+def update_trip_attempt_feedback(
+    session: Session,
+    trip_id: UUID,
+    attempt_id: UUID,
+    feedback_text: str,
+) -> TripAttemptMutationData:
+    return update_trip_attempt(
+        session,
+        trip_id,
+        attempt_id,
+        attempt_status=None,
+        feedback_text=feedback_text,
+    )
+
+
 def _map_trip_list_item(row: object) -> TripListItemData:
     return TripListItemData(
         id=row["id"],
@@ -98,3 +154,17 @@ def _map_current_attempt(row: object) -> CurrentTripAttemptData:
 def _map_attempt(row: object) -> TripAttemptData:
     return TripAttemptData(
         id=row["id"],
+        trip_id=row["trip_id"],
+        status=row["status"],
+        feedback_text=row["feedback_text"],
+        created_at=row["created_at"],
+    )
+
+
+def _map_attempt_mutation(row: object) -> TripAttemptMutationData:
+    return TripAttemptMutationData(
+        id=row["id"],
+        trip_id=row["trip_id"],
+        status=row["status"],
+        feedback_text=row["feedback_text"],
+    )
