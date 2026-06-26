@@ -139,8 +139,6 @@ def create_trip_with_attempt(
             "feedback_text": None,
         },
     )
-    session.commit()
-
     trip = get_trip(session, trip_id)
     attempt = get_current_trip_attempt(session, trip_id)
     if trip is None or attempt is None:
@@ -160,7 +158,6 @@ def update_trip_title(session: Session, trip_id: UUID, title: str) -> RowMapping
         ),
         {"trip_id": str(trip_id), "title": title},
     )
-    session.commit()
     return get_trip(session, trip_id)
 
 
@@ -184,8 +181,6 @@ def create_trip_attempt(
             "feedback_text": None,
         },
     )
-    session.commit()
-
     attempt = get_trip_attempt(session, trip_id, attempt_id)
     if attempt is None:
         raise RuntimeError("Created trip attempt could not be loaded")
@@ -225,7 +220,6 @@ def update_trip_attempt(
         ),
         params,
     )
-    session.commit()
     if result.rowcount == 0:
         return None
     return get_trip_attempt(session, trip_id, attempt_id)
