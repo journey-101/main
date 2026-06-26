@@ -84,7 +84,7 @@ export function MapComponent() {
   return (
     <div style={{ position: "relative", width: "100%", height: "100vh" }}>
       
-      {/* 장소 선택 버튼 레이아웃 */}
+      {/* 장소 선택 버튼 UI 레이아웃 */}
       <div style={{
         position: "absolute",
         top: "20px",
@@ -92,29 +92,41 @@ export function MapComponent() {
         transform: "translateX(-50%)",
         zIndex: 10,
         backgroundColor: "rgba(255, 255, 255, 0.9)",
-        padding: "15px",
-        borderRadius: "10px",
-        boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+        padding: "12px 20px",
+        borderRadius: "30px",
+        boxShadow: "0 4px 15px rgba(0,0,0,0.15)",
         display: "flex",
-        gap: "10px"
+        gap: "10px",
+        alignItems: "center"
       }}>
+        <span style={{ fontSize: "13px", fontWeight: "bold", color: "#555", marginRight: "5px" }}>도보 추천:</span>
         {MOCK_DESTINATIONS.map((dest) => (
           <button
             key={dest.id}
             onClick={() => handleFindPath(dest)}
             style={{
-              padding: "10px 15px",
-              backgroundColor: selectedDest?.id === dest.id ? "#fee500" : "#fff",
-              border: "1px solid #ccc",
-              borderRadius: "5px",
+              padding: "8px 16px",
+              backgroundColor: selectedDest?.id === dest.id ? "#ff5656" : "#fff", // 선택 시 빨간색 경로 매칭
+              color: selectedDest?.id === dest.id ? "#fff" : "#333",
+              border: "1px solid #e0e0e0",
+              borderRadius: "20px",
               cursor: "pointer",
               fontWeight: "bold",
-              color: "#000"
+              fontSize: "13px",
+              transition: "all 0.2s"
             }}
           >
             {dest.name}
           </button>
         ))}
+        {selectedDest && (
+          <button 
+            onClick={() => { setSelectedDest(null); setMapCenter({ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng }); }}
+            style={{ padding: "8px 12px", backgroundColor: "#eee", border: "none", borderRadius: "20px", cursor: "pointer", fontSize: "12px" }}
+          >
+            초기화
+          </button>
+        )}
       </div>
 
       {/* 카카오맵 렌더링 영역 */}
