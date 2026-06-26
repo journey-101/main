@@ -12,6 +12,7 @@
     "@vitejs/plugin-react": "latest",
     "react": "latest",
     "react-dom": "latest",
+    "react-kakao-maps-sdk": "^1.2.1",
     "typescript": "latest",
     "vite": "latest"
   },
