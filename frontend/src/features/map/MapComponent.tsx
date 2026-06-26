@@ -36,6 +36,7 @@ export function MapComponent() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [center, setCenter] = useState({ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng });
+  const [mapInstance, setMapInstance] = useState<kakao.maps.Map | null>(null);
 
   // 3. [단계 1] '오늘의 여행' 버튼 클릭 시 실행되는 함수 (추후 /place API 연동 지점)
   const handleFetchPlaces = () => {
@@ -66,6 +67,15 @@ export function MapComponent() {
     setCenter({ lat: centerLat, lng: centerLng });
   };
 
+  useEffect(() => {
+    if (mapInstance && selectedPlace) {
+      // 아주 미세한 시간차(0.1초)를 두고 지도를 강제로 리사이즈/재인식 시켜서 선이 그려지도록 유도합니다.
+      setTimeout(() => {
+        mapInstance.relayout();
+      }, 100);
+    }
+  }, [selectedPlace, mapInstance]);
+  
   // 5. 모든 상태를 처음으로 돌리는 초기화 함수
   const handleReset = () => {
     setPlaces([]);
@@ -141,8 +151,9 @@ export function MapComponent() {
       {/* 카카오맵 엔진 */}
       <Map
         center={center} // 💡 상태 분리된 독립 center 변수 연동
-        style={{ width: "100%", height: "100%" }}
+        style={{ width: "100%", height: "600px" }}
         level={4}
+        onCreate={setMapInstance}
       >
         {/* 출발지 마커 */}
         <MapMarker position={{ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng }}>
