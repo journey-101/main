@@ -21,8 +21,8 @@ export function MapComponent() {
     const handleFindPath = (destination: typeof MOCK_DESTINATIONS[0]) => {
         setSelectedDest(destination);
 
-        const pathURI = 'https://map.kakao.com/link/by/walk/{destination.name},${destination.lat},${destination.lng}/from/${CURRENT_LOCATION.name},${CURRENT_LOCATION.lat},${CURRENT_LOCATION.lng}';
-        window.location.href = pathURI;
+        const pathUrl = `https://kakao.com{destination.name},${destination.lat},${destination.lng}/from/${CURRENT_LOCATION.name},${CURRENT_LOCATION.lat},${CURRENT_LOCATION.lng}`;
+        window.location.href = pathUrl;
     }
 
   return (
