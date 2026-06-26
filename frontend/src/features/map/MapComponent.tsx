@@ -32,13 +32,10 @@ export function MapComponent() {
     setSelectedDest(destination);
 
     // 카카오맵 공식 도보 길찾기 URL 패턴 생성
-    const pathUrl = `https://kakao.com{destination.name},${destination.lat},${destination.lng}/from/${CURRENT_LOCATION.name},${CURRENT_LOCATION.lat},${CURRENT_LOCATION.lng}`;
+    const pathUrl = `https://kakao.com{CURRENT_LOCATION.lat},${CURRENT_LOCATION.lng},${CURRENT_LOCATION.name}&ep=${destination.lat},${destination.lng},${destination.name}&by=FOOT`;
     
     // 현재 창에서 바로 카카오맵 길찾기 모바일 페이지로 전환
-    window.location.href = pathUrl;
-
-    // 💡 만약 내 앱(웹뷰)은 그대로 두고 새 탭으로 띄우고 싶다면 위 줄을 주석처리하고 아래 줄을 켜세요.
-    // window.open(pathUrl, "_blank");
+    window.location.assign(pathUrl);
   };
 
   return (
@@ -87,16 +84,6 @@ export function MapComponent() {
         <MapMarker position={{ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng }}>
           <div style={{ padding: "5px", color: "#000", fontWeight: "bold" }}>내 현위치</div>
         </MapMarker>
-
-        {/* 목적지 3개 마커 표시 */}
-        {MOCK_DESTINATIONS.map((dest) => (
-          <MapMarker 
-            key={dest.id} 
-            position={{ lat: dest.lat, lng: dest.lng }}
-          >
-            <div style={{ padding: "5px", color: "#333" }}>{dest.name}</div>
-          </MapMarker>
-        ))}
       </Map>
     </div>
   );
