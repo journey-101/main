@@ -75,10 +75,10 @@ export function MapComponent() {
     setMapLevel(4); // 경로가 잘 보이는 축척 레벨로 고정
 
     // 카카오맵 공식 도보 길찾기 URL 패턴 생성
-    const pathUrl = 'https://map.kakao.com/link/by/walk/${CURRENT_LOCATION.name},${CURRENT_LOCATION.lat},${CURRENT_LOCATION.lng}/${destination.name},${destination.lat},${destination.lng}';
+    // const pathUrl = 'https://map.kakao.com/link/by/walk/${CURRENT_LOCATION.name},${CURRENT_LOCATION.lat},${CURRENT_LOCATION.lng}/${destination.name},${destination.lat},${destination.lng}';
     
     // URL 상태만 저장하여 내부 iframe으로 띄웁니다.
-    setPathUrl(pathUrl);
+    // setPathUrl(pathUrl);
   };
 
   return (
