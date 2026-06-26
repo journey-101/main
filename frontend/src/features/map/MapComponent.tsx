@@ -1,6 +1,14 @@
 import React from "react";
 import { Map, MapMarker } from "react-kakao-maps-sdk";
 
+//객체 타입 정의
+interface Destination {
+  id: number;
+  name: string;
+  lat: number;
+  lng: number;
+}
+
 //임의설정 현재 위치. 추후, 사용자 GPS 연동
 const CURRENT_LOCATION = {
     name: "서울시청",
