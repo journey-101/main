@@ -23,7 +23,14 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
+      - type: bind
+        source: ./backend
+        target: /app
+      - type: volume
+        source: backend_venv
+        target: /app/.venv
+        volume:
+          nocopy: true
     depends_on:
       postgres:
         condition: service_healthy
@@ -38,6 +45,7 @@ services:
       - "${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./backend/db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -46,4 +54,5 @@ services:
 
 volumes:
   frontend_node_modules:
+  backend_venv:
   postgres_data:
