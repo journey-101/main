@@ -1,91 +1,54 @@
 import React, { useState, useEffect } from "react";
 import { Map, MapMarker, Polyline } from "react-kakao-maps-sdk";
-
-declare global {
-  interface Window {
-    kakao: any;
-  }
-}
-
-interface Place {
-  id: number;
-  name: string;
-  address: string;
-  lat: number;
-  lng: number;
-}
-
-const CURRENT_LOCATION = { name: "서울시청", lat: 37.5665, lng: 126.9780 };
-
-const MOCK_PLACES: Place[] = [
-  { 
-    id: 1, 
-    name: "덕수궁", 
-    address: "서울 중구 세종대로 99",
-    lat: 37.5658, 
-    lng: 126.9751
-  },
-  { 
-    id: 2, 
-    name: "광화문광장", 
-    address: "서울 종로구 세종대로 172",
-    lat: 37.5724, 
-    lng: 126.9769
-  },
-  { 
-    id: 3, 
-    name: "명동성당", 
-    address: "서울 중구 명동길 74",
-    lat: 37.5632, 
-    lng: 126.9874
-  },
-];
+import { Place, fetchPlacesFromApi, getCurrentLocation } from "./mapApi";
+import { calculateCenterCoordinate, logSelectedPlaceDetails } from "./mapService";
 
 export function MapComponent() {
+  const CURRENT_LOCATION = getCurrentLocation();
+
+  // 상태 관리
   const [places, setPlaces] = useState<Place[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [center, setCenter] = useState({ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng });
-  const [mapInstance, setMapInstance] = useState<kakao.maps.Map | null>(null);
+  const [mapInstance, setMapInstance] = useState<any>(null);
 
-  // 3. [단계 1] '오늘의 여행' 버튼 클릭 시 실행되는 함수 (추후 /place API 연동 지점)
-  const handleFetchPlaces = () => {
+  // '오늘의 여행' 버튼 클릭 시 데이터 가져오기 (1번 API 파일 호출)
+  const handleFetchPlaces = async () => {
     console.log("========================================");
     console.log("[프론트엔드 액션] '오늘의 여행' 버튼 클릭됨");
-    console.log("[백엔드 API 연동 예정] [GET] /place 호출 시점입니다.");
     console.log("========================================");
-
-    // 💡 지금은 백엔드가 없으므로, 준비해 둔 가상 DB 데이터를 상태에 주입하여 화면에 노출시킵니다.
-    // 추후: fetch('/place').then(res => res.json()).then(data => setPlaces(data))
-    setPlaces(MOCK_PLACES);
+    
+    const data = await fetchPlacesFromApi();
+    setPlaces(data);
   };
 
+  // 장소 목록 중 하나를 선택했을 때 데이터 가공 및 가이드 (2번 Service 파일 호출)
   const handleSelectPlace = (place: Place) => {
     setSelectedPlace(place);
+    logSelectedPlaceDetails(place);
 
-    // 💡 [요구사항 반영] 개발자 도구 콘솔창에 주소 조회 임의 로그 출력
-    console.log(`========================================`);
-    console.log(`[프론트엔드 액션] 사용자가 목적지를 선택했습니다.`);
-    console.log(`[목적지 명칭] ${place.name}`);
-    console.log(`[백엔드 API 연동 데이터]조회 대상 주소: ${place.address}`);
-    console.log(`[연동 가이드] 추후 /place?address=${encodeURIComponent(place.address)} 형태로 Fetch 예정`);
-    console.log(`========================================`);
-
-    // 지도 화면 중심을 출발지와 목적지의 중간으로 이동시켜 직선이 한눈에 보이도록 세팅
-    const centerLat = (CURRENT_LOCATION.lat + place.lat) / 2;
-    const centerLng = (CURRENT_LOCATION.lng + place.lng) / 2;
-    setCenter({ lat: centerLat, lng: centerLng });
+    // 중간 중심축 계산 기능 호출 후 상태 반영
+    const nextCenter = calculateCenterCoordinate(
+      CURRENT_LOCATION.lat,
+      CURRENT_LOCATION.lng,
+      place.lat,
+      place.lng
+    );
+    setCenter(nextCenter);
   };
 
+  // 지도 리레이아웃 타이밍 제어 효과
   useEffect(() => {
     if (mapInstance && selectedPlace) {
-      // 아주 미세한 시간차(0.1초)를 두고 지도를 강제로 리사이즈/재인식 시켜서 선이 그려지도록 유도합니다.
       setTimeout(() => {
-        mapInstance.relayout();
+        if (typeof mapInstance.relayout === "function") {
+          mapInstance.relayout();
+        }
       }, 100);
     }
   }, [selectedPlace, mapInstance]);
   
-  // 5. 모든 상태를 처음으로 돌리는 초기화 함수
+  // 모든 상태 초기화
   const handleReset = () => {
     setPlaces([]);
     setSelectedPlace(null);
@@ -95,7 +58,7 @@ export function MapComponent() {
   return (
     <div style={{ position: "relative", width: "100%", height: "100vh" }}>
       
-      {/* 장소 목록 선택 버튼바 UI 레이아웃 */}
+      {/* 상단 버튼 컨트롤러 영역 */}
       <div style={{
         position: "absolute",
         top: "20px",
@@ -109,24 +72,15 @@ export function MapComponent() {
         display: "flex",
         gap: "10px",
         alignItems: "center"
-      }}>{places.length === 0 ? (
+      }}>
+        {places.length === 0 ? (
           <button
             onClick={handleFetchPlaces}
-            style={{
-              padding: "10px 20px",
-              backgroundColor: "#fee500", // 카카오 고유 시그니처 옐로우
-              color: "#222",
-              border: "none",
-              borderRadius: "20px",
-              cursor: "pointer",
-              fontWeight: "bold",
-              fontSize: "14px"
-            }}
+            style={{ padding: "10px 20px", backgroundColor: "#fee500", color: "#222", border: "none", borderRadius: "20px", cursor: "pointer", fontWeight: "bold", fontSize: "14px" }}
           >
             🚀 오늘의 여행 추천받기
           </button>
         ) : (
-          // 💡 [순서 반영] '오늘의 여행'을 눌러 데이터가 채워지면 아래의 장소 목록 버튼들이 나타납니다.
           <>
             <span style={{ fontSize: "13px", fontWeight: "bold", color: "#555" }}>목적지 선택:</span>
             {places.map((place) => (
@@ -147,20 +101,17 @@ export function MapComponent() {
                 {place.name}
               </button>
             ))}
-            <button 
-              onClick={handleReset}
-              style={{ padding: "8px 12px", backgroundColor: "#eee", border: "none", borderRadius: "20px", cursor: "pointer", fontSize: "12px", color: "#333" }}
-            >
+            <button onClick={handleReset} style={{ padding: "8px 12px", backgroundColor: "#eee", border: "none", borderRadius: "20px", cursor: "pointer", fontSize: "12px", color: "#333" }}>
               닫기
             </button>
           </>
         )}
       </div>
 
-      {/* 카카오맵 엔진 */}
+      {/* 카카오맵 렌더링 물리 공간 */}
       <Map
-        center={center} // 💡 상태 분리된 독립 center 변수 연동
-        style={{ width: "100%", height: "600px" }}
+        center={center}
+        style={{ width: "100%", height: "100%" }}
         level={4}
         onCreate={setMapInstance}
       >
@@ -169,20 +120,24 @@ export function MapComponent() {
           <div style={{ padding: "5px", color: "#000", fontWeight: "bold", fontSize: "12px" }}>출발: 서울시청</div>
         </MapMarker>
 
-        {/* 💡 도보 추천 경로선 그리기 구문 위치 조율 */}
-        {selectedPlace !== null && (
-          <Polyline
-            path={[
-                {lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng},
-                {lat: selectedPlace.lat, lng: selectedPlace.lng}
-            ]}
-            strokeWeight={6}
-            strokeColor={"#ff5656"}
-            strokeOpacity={0.85}
-            strokeStyle={"solid"}
-          />
-        )}
+        {/* 목적지 마커 리스트 루프 */}
+        {places.map((place) => (
+          <MapMarker key={place.id} position={{ lat: place.lat, lng: place.lng }}>
+            <div style={{ padding: "5px", color: "#333", fontSize: "12px" }}>{place.name}</div>
+          </MapMarker>
+        ))}
+
+        {/* 가이드 라인 그리기 */}
+        <Polyline
+          path={selectedPlace ? [
+            { lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng },
+            { lat: selectedPlace.lat, lng: selectedPlace.lng }
+          ] : []}
+          strokeWeight={6}
+          strokeColor={"#ff5656"}
+          strokeOpacity={0.85}
+          strokeStyle={"solid"}
+        />
       </Map>
     </div>
   );
-}
