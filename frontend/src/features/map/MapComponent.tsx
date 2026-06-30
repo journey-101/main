@@ -120,13 +120,6 @@ export function MapComponent() {
           <div style={{ padding: "5px", color: "#000", fontWeight: "bold", fontSize: "12px" }}>출발: 서울시청</div>
         </MapMarker>
 
-        {/* 목적지 마커 리스트 루프 */}
-        {places.map((place) => (
-          <MapMarker key={place.id} position={{ lat: place.lat, lng: place.lng }}>
-            <div style={{ padding: "5px", color: "#333", fontSize: "12px" }}>{place.name}</div>
-          </MapMarker>
-        ))}
-
         {/* 가이드 라인 그리기 */}
         <Polyline
           path={selectedPlace ? [
