@@ -178,6 +178,31 @@ export function MapComponent() {
         )}
       </div>
 
+      {/* 카카오맵 렌더링 물리 공간 */}
+      <Map
+        center={center}
+        style={{ width: "100%", height: "100%" }}
+        level={4}
+        onCreate={setMapInstance}
+      >
+        {/* 출발지 마커 */}
+        <MapMarker position={{ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng }}>
+          <div style={{ padding: "5px", color: "#000", fontWeight: "bold", fontSize: "12px" }}>출발: 서울시청</div>
+        </MapMarker>
+
+        {/* 가이드 라인 그리기 */}
+        <Polyline
+          path={selectedPlace ? [
+            { lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng },
+            { lat: selectedPlace.lat, lng: selectedPlace.lng }
+          ] : []}
+          strokeWeight={6}
+          strokeColor={"#ff5656"}
+          strokeOpacity={0.85}
+          strokeStyle={"solid"}
+        />
+      </Map>
+
       {/* 1단계: 여정 생성 */}
       <div style={{ marginBottom: '25px', padding: '15px', border: '1px solid #ddd', borderRadius: '6px' }}>
         <h3 style={{ margin: '0 0 10px 0', color: '#e67e22' }}>1. 여정 생성 (POST /trips)</h3>
@@ -244,31 +269,6 @@ export function MapComponent() {
           <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>여정을 먼저 생성하고 조회 버튼을 누르면 정밀 스펙이 로드됩니다.</p>
         )}
         </div>
-
-      {/* 카카오맵 렌더링 물리 공간 */}
-      <Map
-        center={center}
-        style={{ width: "100%", height: "100%" }}
-        level={4}
-        onCreate={setMapInstance}
-      >
-        {/* 출발지 마커 */}
-        <MapMarker position={{ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng }}>
-          <div style={{ padding: "5px", color: "#000", fontWeight: "bold", fontSize: "12px" }}>출발: 서울시청</div>
-        </MapMarker>
-
-        {/* 가이드 라인 그리기 */}
-        <Polyline
-          path={selectedPlace ? [
-            { lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng },
-            { lat: selectedPlace.lat, lng: selectedPlace.lng }
-          ] : []}
-          strokeWeight={6}
-          strokeColor={"#ff5656"}
-          strokeOpacity={0.85}
-          strokeStyle={"solid"}
-        />
-      </Map>
     </div>
   );
 }
