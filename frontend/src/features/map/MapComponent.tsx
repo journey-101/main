@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Map, MapMarker, Polyline } from "react-kakao-maps-sdk";
-import { Place, fetchPlacesFromApi, getCurrentLocation } from "./mapApi";
-import { calculateCenterCoordinate, logSelectedPlaceDetails } from "./mapService";
+import { Place, fetchPlacesFromApi, getCurrentLocation, CreateTripRequest, TripResponse } from "./mapApi";
+import { calculateCenterCoordinate, logSelectedPlaceDetails, mapService } from "./mapService";
 
 export function MapComponent() {
   const CURRENT_LOCATION = getCurrentLocation();
@@ -53,6 +53,76 @@ export function MapComponent() {
     setPlaces([]);
     setSelectedPlace(null);
     setCenter({ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng });
+  };
+
+  // 여정 목업 데이터
+  const [tripFormData, setTripFormData] = useState<CreateTripRequest>({
+    title: '서울 혼자 연습 여행',
+    origin_region_code: 'KR-41',
+    destination_region_code: 'KR-11',
+    start_date: '2026-07-20',
+    end_date: '2026-07-20',
+    party_size: 1,
+    budget_min: 30000,
+    budget_max: 70000,
+    pace: 'slow',
+    transport_mode: 'public_transport',
+    purpose: 'first_trip',
+    memo: '너무 빡세지 않게',
+  });
+
+  // 조회 및 검증 단계 흐름 제어용 상탯값
+  const [lastCreatedId, setLastCreatedId] = useState<string>(''); // 생성된 uuid 보관
+  const [fetchedTrip, setFetchedTrip] = useState<TripResponse | null>(null); // GET 결과 보관
+  const [tagInput, setTagInput] = useState<string>(''); // 추가할 후기 태그 문자열
+
+  // 폼 필드 입력 헬퍼 함수
+  const handleFieldChange = (key: keyof CreateTripRequest, value: any) => {
+    setTripFormData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // 여정 POST 호출
+  const handlePostTrip = async () => {
+    console.log('[UI Action] 목적지 선택 완료 -> 여정 생성(POST) 호출');
+    const result = await mapService.registerTrip(tripFormData);
+    
+    if (result) {
+      setLastCreatedId(result.id);
+      alert(`여정이 성공적으로 POST 되었습니다!\n생성된 uuid: ${result.id}\n이제 2단계 조회를 진행하세요.`);
+    }
+  };
+
+  // 여정 GET 호출
+  const handleGetTrip = async () => {
+    if (!lastCreatedId) {
+      alert('생성된 여정 uuid가 없습니다. 먼저 1단계 여정 생성을 실행해 주세요.');
+      return;
+    }
+
+    console.log(`[UI Action] 여정 조회(GET) 호출 -> ID: ${lastCreatedId}`);
+    const result = await mapService.getTripDetails(lastCreatedId);
+    
+    if (result) {
+      setFetchedTrip(result);
+    }
+  };
+
+  // 여정 PATCH 호출
+  const handlePatchTripTags = async () => {
+    if (!fetchedTrip) {
+      alert('조회된 여정 데이터가 없습니다. 먼저 2단계 조회를 실행해 주세요.');
+      return;
+    }
+    if (!tagInput.trim()) return;
+
+    const updatedTags = [...fetchedTrip.reviewTags, tagInput.trim()];
+    console.log(`[UI Action] 여정 후기 태그 수정(PATCH) 호출 -> ID: ${fetchedTrip.id}`);
+
+    const result = await mapService.modifyTrip(fetchedTrip.id, { reviewTags: updatedTags });
+    if (result) {
+      setFetchedTrip(result);
+      setTagInput('');
+    }
   };
 
   return (
@@ -107,6 +177,73 @@ export function MapComponent() {
           </>
         )}
       </div>
+
+      {/* 1단계: 여정 생성 */}
+      <div style={{ marginBottom: '25px', padding: '15px', border: '1px solid #ddd', borderRadius: '6px' }}>
+        <h3 style={{ margin: '0 0 10px 0', color: '#e67e22' }}>1. 여정 생성 (POST /trips)</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px', fontSize: '14px' }}>
+          <label>여행 제목: <input type="text" value={tripFormData.title} onChange={e => handleFieldChange('title', e.target.value)} /></label>
+          <label>출발지 코드: <input type="text" value={tripFormData.origin_region_code} onChange={e => handleFieldChange('origin_region_code', e.target.value)} /></label>
+          <label>목적지 코드: <input type="text" value={tripFormData.destination_region_code} onChange={e => handleFieldChange('destination_region_code', e.target.value)} /></label>
+          <label>메모: <input type="text" value={tripFormData.memo} onChange={e => handleFieldChange('memo', e.target.value)} /></label>
+        </div>
+        <button onClick={handlePostTrip} style={{ padding: '8px 16px', backgroundColor: '#e67e22', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+          목적지 선택 및 여정 생성 (POST)
+        </button>
+        {lastCreatedId && (
+          <p style={{ marginTop: '10px', fontSize: '13px', color: '#27ae60' }}>
+            💡 발급된 발자국 ID(uuid): <strong>{lastCreatedId}</strong>
+          </p>
+        )}
+      </div>
+
+      {/* 2단계 및 3단계: 조회 및 동일 경로 수정 */}
+      <div style={{ padding: '15px', border: '1px solid #2980b9', borderRadius: '6px', backgroundColor: '#f4f9fc' }}>
+        <h3 style={{ margin: '0 0 10px 0', color: '#2980b9' }}>2 & 3. 여정 상세조회 및 태그 수정 (/trips/{"{uuid}"})</h3>
+        
+        <div style={{ marginBottom: '15px' }}>
+          <button onClick={handleGetTrip} style={{ padding: '8px 16px', backgroundColor: '#2980b9', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', marginRight: '10px' }}>
+            여정 상세 조회 (GET)
+          </button>
+        </div>
+
+        {fetchedTrip ? (
+          <div style={{ background: '#fff', padding: '15px', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
+            <h4 style={{ margin: '0 0 8px 0' }}>📄 백엔드 수신 데이터 결과</h4>
+            <pre style={{ background: '#f8fafc', padding: '10px', borderRadius: '4px', fontSize: '12px', overflowX: 'auto' }}>
+              {JSON.stringify(fetchedTrip, null, 2)}
+            </pre>
+
+            {/* 3단계 태그 가공 폼 */}
+            <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed #cbd5e1' }}>
+              <h4 style={{ margin: '0 0 8px 0' }}>🏷️ 후기 태그 수집용 컴포넌트</h4>
+              <div style={{ marginBottom: '10px' }}>
+                {fetchedTrip.reviewTags.length === 0 ? (
+                  <span style={{ color: '#94a3b8', fontSize: '13px' }}>등록된 후기 태그가 없습니다.</span>
+                ) : (
+                  fetchedTrip.reviewTags.map((tag, idx) => (
+                    <span key={idx} style={{ backgroundColor: '#fef3c7', color: '#d97706', padding: '3px 8px', marginRight: '6px', borderRadius: '4px', fontSize: '13px', fontWeight: '5px' }}>
+                      #{tag}
+                    </span>
+                  ))
+                )}
+              </div>
+              <input 
+                type="text" 
+                placeholder="예: 가성비최고, 혼자여행" 
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                style={{ padding: '5px', width: '160px', marginRight: '6px' }}
+              />
+              <button onClick={handlePatchTripTags} style={{ padding: '5px 12px', backgroundColor: '#059669', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                태그 저장 (PATCH)
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>여정을 먼저 생성하고 조회 버튼을 누르면 정밀 스펙이 로드됩니다.</p>
+        )}
+        </div>
 
       {/* 카카오맵 렌더링 물리 공간 */}
       <Map

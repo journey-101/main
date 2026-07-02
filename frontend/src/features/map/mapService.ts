@@ -1,4 +1,4 @@
-import { Place } from "./mapApi";
+import { Place, createTripApi, getTripByIdApi, updateTripApi, CreateTripRequest, TripResponse } from './mapApi';
 
 /**
  * 출발지와 목적지 좌표를 바탕으로 지도의 중간 중심축 좌표를 계산하는 함수
@@ -19,4 +19,39 @@ export const logSelectedPlaceDetails = (place: Place) => {
   console.log(`[백엔드 API 연동 데이터]조회 대상 주소: ${place.address}`);
   console.log(`[연동 가이드] 추후 /place?address=${encodeURIComponent(place.address)} 형태로 Fetch 예정`);
   console.log(`========================================`);
+};
+
+export const mapService = {
+  // 1. 여정 등록 실행
+  registerTrip: async (tripData: CreateTripRequest): Promise<TripResponse | null> => {
+    try {
+      const response = await createTripApi(tripData);
+      return response.success ? response.data : null;
+    } catch (error) {
+      console.error('Service Error - registerTrip:', error);
+      throw error;
+    }
+  },
+
+  // 2. 단건 여정 상세 조회 (/trips/{trips_id})
+  getTripDetails: async (tripsId: string): Promise<TripResponse | null> => {
+    try {
+      const response = await getTripByIdApi(tripsId);
+      return response.success ? response.data : null;
+    } catch (error) {
+      console.error('Service Error - getTripDetails:', error);
+      throw error;
+    }
+  },
+
+  // 3. 동일 경로 여정 수정 (후기 태그 등 업데이트)
+  modifyTrip: async (tripsId: string, fieldsToUpdate: Partial<TripResponse>): Promise<TripResponse | null> => {
+    try {
+      const response = await updateTripApi(tripsId, fieldsToUpdate);
+      return response.success ? response.data : null;
+    } catch (error) {
+      console.error('Service Error - modifyTrip:', error);
+      throw error;
+    }
+  },
 };
