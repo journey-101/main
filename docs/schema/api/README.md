@@ -7,6 +7,7 @@
 
 - [Debug API](./debug.md)
 - [Health API](./health.md)
+- [Places API](./places.md)
 - [Trips API](./trips.md)
 
 ## 디렉토리 목적
