@@ -12,11 +12,13 @@
     "@vitejs/plugin-react": "latest",
     "react": "latest",
     "react-dom": "latest",
+    "react-kakao-maps-sdk": "^1.2.1",
     "typescript": "latest",
     "vite": "latest"
   },
   "devDependencies": {
     "@types/react": "latest",
-    "@types/react-dom": "latest"
+    "@types/react-dom": "latest",
+    "kakao.maps.d.ts": "^0.1.40"
   }
 }
