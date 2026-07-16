@@ -107,10 +107,10 @@ export function MapComponent() {
     }
     if (!tagInput.trim()) return;
 
-    const updatedTags = [...fetchedTrip.reviewTags, tagInput.trim()];
+    const updatedTags = [...fetchedTrip.feedback_text, tagInput.trim()];
     console.log(`[UI Action] 여정 후기 태그 수정(PATCH) 호출 -> ID: ${fetchedTrip.id}`);
 
-    const result = await mapService.modifyTrip(fetchedTrip.id, { reviewTags: updatedTags });
+    const result = await mapService.modifyTrip(fetchedTrip.id, { feedback_text: updatedTags });
     if (result) {
       setFetchedTrip(result);
       setTagInput('');
@@ -281,10 +281,10 @@ export function MapComponent() {
             <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed #cbd5e1' }}>
               <h4 style={{ margin: '0 0 8px 0' }}>🏷️ 후기 태그 수집용 컴포넌트</h4>
               <div style={{ marginBottom: '10px' }}>
-                {fetchedTrip.reviewTags.length === 0 ? (
+                {fetchedTrip.feedback_text.length === 0 ? (
                   <span style={{ color: '#94a3b8', fontSize: '13px' }}>등록된 후기 태그가 없습니다.</span>
                 ) : (
-                  fetchedTrip.reviewTags.map((tag, idx) => (
+                  fetchedTrip.feedback_text.map((tag, idx) => (
                     <span key={idx} style={{ backgroundColor: '#fef3c7', color: '#d97706', padding: '3px 8px', marginRight: '6px', borderRadius: '4px', fontSize: '13px', fontWeight: '5px' }}>
                       #{tag}
                     </span>
