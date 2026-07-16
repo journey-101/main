@@ -9,28 +9,6 @@ export interface Place {
 // 임의의 고정 사용자 현위치 데이터
 const CURRENT_LOCATION = { name: "서울시청", lat: 37.5665, lng: 126.9780 };
 
-// 가상의 백엔드 DB 데이터
-const MOCK_PLACES: Place[] = [
-  { id: 1, name: "덕수궁", address: "서울 중구 세종대로 99", lat: 37.5658, lng: 126.9751 },
-  { id: 2, name: "광화문광장", address: "서울 종로구 세종대로 172", lat: 37.5724, lng: 126.9769 },
-  { id: 3, name: "명동성당", address: "서울 중구 명동길 74", lat: 37.5632, lng: 126.9874 },
-];
-
-/**
- * 백엔드 /place API를 통해 장소 목록을 가져오는 함수 (추후 fetch/axios 연동)
- */
-export const fetchPlacesFromApi = async (): Promise<Place[]> => {
-  console.log("[백엔드 API 연동 예정] [GET] /place 호출 시점입니다.");
-  
-  // 현재는 가상 DB 데이터를 반환합니다.
-  return MOCK_PLACES;
-};
-
-// 기기 환경 또는 고정된 출발지(현위치) 데이터를 가져오는 함수
-export const getCurrentLocation = () => {
-  return CURRENT_LOCATION;
-};
-
 // trips attempt type 관리 및 patch용 선언
 export type TripAttemptStatus = 'started' | 'completed' | 'aborted';
 const isValidAttemptStatus = (status: string): status is TripAttemptStatus => {
@@ -59,10 +37,6 @@ export interface TripAttemptResponse {
   status: TripAttemptStatus;
 }
 
-// 프론트엔드 목업 검증을 위한 인메모리 가상 DB
-const mockTripDatabase: Map<string, TripResponse> = new Map();
-const mockAttemptDatabase: Map<string, TripAttemptResponse> = new Map();
-
 // 가상 UUID 생성 함수
 const generateUUID = (): string => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -72,130 +46,232 @@ const generateUUID = (): string => {
   });
 };
 
+const getApiBaseUrl = (): string => {
+  const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL as string | undefined;
+  if (configuredBaseUrl && configuredBaseUrl.trim()) {
+    return configuredBaseUrl.replace(/\/$/, '');
+  }
+  return 'http://localhost:8000';
+};
+
+const normalizePlace = (raw: any): Place => ({
+  id: Number(raw.id ?? raw.provider_place_id ?? raw.place_id ?? Date.now()),
+  name: raw.name ?? '이름 없음',
+  address: raw.address ?? '',
+  lat: Number(raw.lat ?? 0),
+  lng: Number(raw.lng ?? 0),
+});
+
+const normalizePlaceResponse = (payload: any): Place[] => {
+  if (Array.isArray(payload)) {
+    return payload.map(normalizePlace);
+  }
+  if (payload && Array.isArray(payload.items)) {
+    return payload.items.map(normalizePlace);
+  }
+  if (payload && Array.isArray(payload.data)) {
+    return payload.data.map(normalizePlace);
+  }
+  return [];
+};
+
+const readStorage = <T>(key: string, fallback: T): T => {
+  if (typeof window === 'undefined') {
+    return fallback;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const writeStorage = <T>(key: string, value: T): void => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.setItem(key, JSON.stringify(value));
+};
+
+// 기기 환경 또는 고정된 출발지(현위치) 데이터를 가져오는 함수
+export const getCurrentLocation = () => {
+  return CURRENT_LOCATION;
+};
+
+
+// 실제 백엔드 place API 호출
+export const fetchPlacesFromApi = async (): Promise<Place[]> => {
+  const baseUrl = getApiBaseUrl();
+  const candidatePaths = ['/api/v1/places/search', '/api/v1/places'];
+
+  for (const path of candidatePaths) {
+    try {
+      const url = new URL(path, `${baseUrl}/`);
+      url.searchParams.set('limit', '20');
+
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        continue;
+      }
+
+      const payload = await response.json();
+      const places = normalizePlaceResponse(payload);
+
+      if (places.length > 0) {
+        return places;
+      }
+
+      return [];
+    } catch (error) {
+      console.warn(`500 {"detail": "Unknown place data error"}`, error);
+    }
+  }
+
+  throw new Error('백엔드 place API 호출에 실패했습니다.');
+};
+
+// trips persistence (frontend storage)
+const TRIP_STORAGE_KEY = 'trip-data-storage';
+const ATTEMPT_STORAGE_KEY = 'trip-attempt-storage';
+
 // [POST] 여정 생성
 export const createTripApi = async (tripData: CreateTripRequest): Promise<{ success: boolean; data: TripResponse }> => {
   console.log('[API POST] /trips 요청 데이터:', tripData);
 
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const generatedId = generateUUID();
-      const attemptId = generateUUID();
-      const newTrip: TripResponse = {
-        ...tripData,
-        id: generatedId,
-        status: 'started',
-        feedback_text: [],
-        attemptId,
-        attemptStatus: 'started',
-      };
+  const generatedId = generateUUID();
+  const attemptId = generateUUID();
 
-      mockTripDatabase.set(generatedId, newTrip);
-      mockAttemptDatabase.set(attemptId, {
-        id: attemptId,
-        tripId: generatedId,
-        status: 'started',
-      });
+  const newTrip: TripResponse = {
+    ...tripData,
+    id: generatedId,
+    status: 'started',
+    feedback_text: [],
+    attemptId,
+    attemptStatus: 'started',
+  };
 
-      console.log(`[API POST] 여정 생성 완료 - 경로: /trips/${generatedId}`);
-      resolve({ success: true, data: newTrip });
-    }, 400);
-  });
+  const trips = readStorage<Record<string, TripResponse>>(TRIP_STORAGE_KEY, {});
+  const attempts = readStorage<Record<string, TripAttemptResponse>>(ATTEMPT_STORAGE_KEY, {});
+
+  trips[generatedId] = newTrip;
+  attempts[generatedId] = {
+    id: attemptId,
+    tripId: generatedId,
+    status: 'started',
+  };
+
+  writeStorage(TRIP_STORAGE_KEY, trips);
+  writeStorage(ATTEMPT_STORAGE_KEY, attempts);
+
+  console.log(`[API POST] 여정 생성 완료 - 경로: /trips/${generatedId}`);
+  return { success: true, data: newTrip };
 };
 
 // [GET] 여정 단건 조회
-export const getTripByIdApi = async (tripsId: string): Promise<{ success: boolean; data: TripResponse | null }> => {
-  console.log(`[API GET] /trips/${tripsId} 호출`);
+export const getTripByIdApi = async (trips_id: string): Promise<{ success: boolean; data: TripResponse | null }> => {
+  console.log(`[API GET] /trips/${trips_id} 호출`);
 
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const trip = mockTripDatabase.get(tripsId);
-      if (trip) {
-        const attempt = mockAttemptDatabase.get(tripsId);
-        const tripWithAttempt = {
-          ...trip,
-          attemptId: attempt?.id ?? trip.attemptId,
-          attemptStatus: attempt?.status ?? trip.attemptStatus ?? 'started',
-        };
+  const trips = readStorage<Record<string, TripResponse>>(TRIP_STORAGE_KEY, {});
+  const trip = trips[trips_id];
 
-        console.log(`[API GET] /trips/${tripsId} 조회 성공:`, tripWithAttempt);
-        resolve({ success: true, data: tripWithAttempt });
-      } else {
-        console.warn(`[API GET] /trips/${tripsId} 데이터를 찾을 수 없습니다.`);
-        resolve({ success: false, data: null });
-      }
-    }, 400);
-  });
+  if (!trip) {
+    console.warn(`[API GET] /trips/${trips_id} 데이터를 찾을 수 없습니다.`);
+    return { success: false, data: null };
+  }
+
+  const attempts = readStorage<Record<string, TripAttemptResponse>>(ATTEMPT_STORAGE_KEY, {});
+  const attempt = attempts[trips_id];
+
+  const tripWithAttempt = {
+    ...trip,
+    attemptId: attempt?.id ?? trip.attemptId,
+    attemptStatus: attempt?.status ?? trip.attemptStatus ?? 'started',
+  };
+
+  console.log(`[API GET] /trips/${trips_id} 조회 성공:`, tripWithAttempt);
+  return { success: true, data: tripWithAttempt };
 };
 
 // [PATCH] 여정 수정 (후기 태그 수집용)
 export const updateTripApi = async (
-  tripsId: string,
+  trips_id: string,
   updatedFields: Partial<TripResponse>
 ): Promise<{ success: boolean; data: TripResponse | null }> => {
-  console.log(`[API PATCH] /trips/${tripsId} 수정 요청 데이터:`, updatedFields);
+  console.log(`[API PATCH] /trips/${trips_id} 수정 요청 데이터:`, updatedFields);
 
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const existingTrip = mockTripDatabase.get(tripsId);
-      if (existingTrip) {
-        const updatedTrip = { ...existingTrip, ...updatedFields };
-        mockTripDatabase.set(tripsId, updatedTrip);
+  const trips = readStorage<Record<string, TripResponse>>(TRIP_STORAGE_KEY, {});
+  const existingTrip = trips[trips_id];
 
-        const attempt = mockAttemptDatabase.get(tripsId);
-        if (attempt) {
-          updatedTrip.attemptId = attempt.id;
-          updatedTrip.attemptStatus = attempt.status;
-        }
+  if (!existingTrip) {
+    console.warn(`404 {"detail": "Trip not found"}`);
+    return { success: false, data: null };
+  }
 
-        console.log(`[API PATCH] /trips/${tripsId} 수정 완료`);
-        resolve({ success: true, data: updatedTrip });
-      } else {
-        console.warn(`404 {"detail": "Trip not found"}`);
-        resolve({ success: false, data: null });
-      }
-    }, 400);
-  });
+  const updatedTrip = { ...existingTrip, ...updatedFields };
+  trips[trips_id] = updatedTrip;
+
+  const attempts = readStorage<Record<string, TripAttemptResponse>>(ATTEMPT_STORAGE_KEY, {});
+  const attempt = attempts[trips_id];
+  if (attempt) {
+    updatedTrip.attemptId = attempt.id;
+    updatedTrip.attemptStatus = attempt.status;
+  }
+
+  writeStorage(TRIP_STORAGE_KEY, trips);
+  writeStorage(ATTEMPT_STORAGE_KEY, attempts);
+
+  console.log(`[API PATCH] /trips/${trips_id} 수정 완료`);
+  return { success: true, data: updatedTrip };
 };
 
 export const updateTripAttemptStatusApi = async (
-  tripsId: string,
+  trips_id: string,
   status: TripAttemptStatus
 ): Promise<{ success: boolean; data: TripResponse | null }> => {
-  console.log(`[API PATCH] /trips/${tripsId}/attempt 상태 변경 요청:`, status);
+  console.log(`[API PATCH] /trips/${trips_id}/attempt 상태 변경 요청:`, status);
 
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const existingTrip = mockTripDatabase.get(tripsId);
-      if (!existingTrip) {
-        console.warn(`404 {"detail": "Trip not found"}`);
-        resolve({ success: false, data: null });
-        return;
-      }
+  const trips = readStorage<Record<string, TripResponse>>(TRIP_STORAGE_KEY, {});
+  const existingTrip = trips[trips_id];
 
-      if (!isValidAttemptStatus(status)) {
-        console.warn(`[API PATCH] 허용되지 않은 attempt status: ${status}`);
-        resolve({ success: false, data: null });
-        return;
-      }
+  if (!existingTrip) {
+    console.warn(`404 {"detail": "Trip not found"}`);
+    return { success: false, data: null };
+  }
 
-      const attempt = mockAttemptDatabase.get(tripsId) ?? {
-        id: existingTrip.attemptId ?? generateUUID(),
-        tripId: tripsId,
-        status: 'started',
-      };
+  if (!isValidAttemptStatus(status)) {
+    console.warn(`[API PATCH] 허용되지 않은 attempt status: ${status}`);
+    return { success: false, data: null };
+  }
 
-      const updatedAttempt = { ...attempt, status };
-      mockAttemptDatabase.set(tripsId, updatedAttempt);
+  const attempts = readStorage<Record<string, TripAttemptResponse>>(ATTEMPT_STORAGE_KEY, {});
+  const attempt = attempts[trips_id] ?? {
+    id: existingTrip.attemptId ?? generateUUID(),
+    tripId: trips_id,
+    status: 'started',
+  };
 
-      const updatedTrip = {
-        ...existingTrip,
-        attemptId: updatedAttempt.id,
-        attemptStatus: updatedAttempt.status,
-      };
-      mockTripDatabase.set(tripsId, updatedTrip);
+  const updatedAttempt = { ...attempt, status };
+  attempts[trips_id] = updatedAttempt;
 
-      console.log(`[API PATCH] /trips/${tripsId}/attempt 상태 변경 완료:`, updatedAttempt);
-      resolve({ success: true, data: updatedTrip });
-    }, 400);
-  });
+  const updatedTrip = {
+    ...existingTrip,
+    attemptId: updatedAttempt.id,
+    attemptStatus: updatedAttempt.status,
+  };
+  trips[trips_id] = updatedTrip;
+
+  writeStorage(TRIP_STORAGE_KEY, trips);
+  writeStorage(ATTEMPT_STORAGE_KEY, attempts);
+
+  console.log(`[API PATCH] /trips/${trips_id}/attempt 상태 변경 완료:`, updatedAttempt);
+  return { success: true, data: updatedTrip };
 };
