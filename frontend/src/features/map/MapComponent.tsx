@@ -60,15 +60,6 @@ export function MapComponent() {
     title: '서울 혼자 연습 여행',
     origin_region_code: 'KR-41',
     destination_region_code: 'KR-11',
-    start_date: '2026-07-20',
-    end_date: '2026-07-20',
-    party_size: 1,
-    budget_min: 30000,
-    budget_max: 70000,
-    pace: 'slow',
-    transport_mode: 'public_transport',
-    purpose: 'first_trip',
-    memo: '너무 빡세지 않게',
   });
 
   // 조회 및 검증 단계 흐름 제어용 상탯값
@@ -88,6 +79,7 @@ export function MapComponent() {
     
     if (result) {
       setLastCreatedId(result.id);
+      setFetchedTrip(result);
       alert(`여정이 성공적으로 POST 되었습니다!\n생성된 uuid: ${result.id}\n이제 2단계 조회를 진행하세요.`);
     }
   };
@@ -122,6 +114,36 @@ export function MapComponent() {
     if (result) {
       setFetchedTrip(result);
       setTagInput('');
+    }
+  };
+
+  const handleCompleteAttempt = async () => {
+    const targetTripId = fetchedTrip?.id || lastCreatedId;
+    if (!targetTripId) {
+      alert('여정이 생성되지 않았습니다. 먼저 여정을 생성해 주세요.');
+      return;
+    }
+
+    console.log(`[UI Action] 여정 attempt 완료(PATCH) 호출 -> ID: ${targetTripId}`);
+    const result = await mapService.completeTripAttempt(targetTripId);
+
+    if (result) {
+      setFetchedTrip(result);
+    }
+  };
+
+  const handleAbortAttempt = async () => {
+    const targetTripId = fetchedTrip?.id || lastCreatedId;
+    if (!targetTripId) {
+      alert('여정이 생성되지 않았습니다. 먼저 여정을 생성해 주세요.');
+      return;
+    }
+
+    console.log(`[UI Action] 여정 attempt 일시중단(PATCH) 호출 -> ID: ${targetTripId}`);
+    const result = await mapService.abortTripAttempt(targetTripId);
+
+    if (result) {
+      setFetchedTrip(result);
     }
   };
 
@@ -208,18 +230,24 @@ export function MapComponent() {
         <h3 style={{ margin: '0 0 10px 0', color: '#e67e22' }}>1. 여정 생성 (POST /trips)</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px', fontSize: '14px' }}>
           <label>여행 제목: <input type="text" value={tripFormData.title} onChange={e => handleFieldChange('title', e.target.value)} /></label>
-          <label>출발지 코드: <input type="text" value={tripFormData.origin_region_code} onChange={e => handleFieldChange('origin_region_code', e.target.value)} /></label>
-          <label>목적지 코드: <input type="text" value={tripFormData.destination_region_code} onChange={e => handleFieldChange('destination_region_code', e.target.value)} /></label>
-          <label>메모: <input type="text" value={tripFormData.memo} onChange={e => handleFieldChange('memo', e.target.value)} /></label>
         </div>
         <button onClick={handlePostTrip} style={{ padding: '8px 16px', backgroundColor: '#e67e22', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
           목적지 선택 및 여정 생성 (POST)
         </button>
-        {lastCreatedId && (
-          <p style={{ marginTop: '10px', fontSize: '13px', color: '#27ae60' }}>
-            💡 발급된 발자국 ID(uuid): <strong>{lastCreatedId}</strong>
-          </p>
-        )}
+      </div>
+
+      <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed #cbd5e1' }}>
+        <div style={{ marginBottom: '10px', fontWeight: 'bold', color: fetchedTrip.attemptStatus === 'completed' ? '#059669' : fetchedTrip.attemptStatus === 'aborted' ? '#dc2626' : '#d97706' }}>
+          현재 attempt 상태: {fetchedTrip.attemptStatus ?? 'started'}
+        </div>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+          <button onClick={handleCompleteAttempt} style={{ padding: '8px 12px', backgroundColor: '#059669', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+            완료
+          </button>
+          <button onClick={handleAbortAttempt} style={{ padding: '8px 12px', backgroundColor: '#dc2626', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+            일시중단
+          </button>
+        </div>
       </div>
 
       {/* 2단계 및 3단계: 조회 및 동일 경로 수정 */}
@@ -255,7 +283,6 @@ export function MapComponent() {
               </div>
               <input 
                 type="text" 
-                placeholder="예: 가성비최고, 혼자여행" 
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 style={{ padding: '5px', width: '160px', marginRight: '6px' }}
