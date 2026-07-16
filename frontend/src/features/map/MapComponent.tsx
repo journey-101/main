@@ -236,20 +236,6 @@ export function MapComponent() {
         </button>
       </div>
 
-      <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed #cbd5e1' }}>
-        <div style={{ marginBottom: '10px', fontWeight: 'bold', color: fetchedTrip.attemptStatus === 'completed' ? '#059669' : fetchedTrip.attemptStatus === 'aborted' ? '#dc2626' : '#d97706' }}>
-          현재 attempt 상태: {fetchedTrip.attemptStatus ?? 'started'}
-        </div>
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-          <button onClick={handleCompleteAttempt} style={{ padding: '8px 12px', backgroundColor: '#059669', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-            완료
-          </button>
-          <button onClick={handleAbortAttempt} style={{ padding: '8px 12px', backgroundColor: '#dc2626', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-            일시중단
-          </button>
-        </div>
-      </div>
-
       {/* 2단계 및 3단계: 조회 및 동일 경로 수정 */}
       <div style={{ padding: '15px', border: '1px solid #2980b9', borderRadius: '6px', backgroundColor: '#f4f9fc' }}>
         <h3 style={{ margin: '0 0 10px 0', color: '#2980b9' }}>2 & 3. 여정 상세조회 및 태그 수정 (/trips/{"{uuid}"})</h3>
@@ -267,7 +253,31 @@ export function MapComponent() {
               {JSON.stringify(fetchedTrip, null, 2)}
             </pre>
 
-            {/* 3단계 태그 가공 폼 */}
+            <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed #cbd5e1' }}>
+              <div
+                style={{
+                  marginBottom: '10px',
+                  fontWeight: 'bold',
+                  color:
+                    fetchedTrip.attemptStatus === 'completed'
+                      ? '#059669'
+                      : fetchedTrip.attemptStatus === 'aborted'
+                      ? '#dc2626'
+                      : '#d97706',
+                }}
+              >
+                현재 attempt 상태: {fetchedTrip.attemptStatus ?? 'started'}
+              </div>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                <button onClick={handleCompleteAttempt} style={{ padding: '8px 12px', backgroundColor: '#059669', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                  완료
+                </button>
+                <button onClick={handleAbortAttempt} style={{ padding: '8px 12px', backgroundColor: '#dc2626', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                  일시중단
+                </button>
+              </div>
+            </div>
+
             <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed #cbd5e1' }}>
               <h4 style={{ margin: '0 0 8px 0' }}>🏷️ 후기 태그 수집용 컴포넌트</h4>
               <div style={{ marginBottom: '10px' }}>
@@ -281,8 +291,8 @@ export function MapComponent() {
                   ))
                 )}
               </div>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 style={{ padding: '5px', width: '160px', marginRight: '6px' }}
