@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Map, MapMarker, Polyline } from "react-kakao-maps-sdk";
 import { Place, fetchPlacesFromApi, getCurrentLocation, CreateTripRequest, TripResponse } from "./mapApi";
-import { calculateCenterCoordinate, logSelectedPlaceDetails, mapService } from "./mapService";
+import { calculateCenterCoordinate, mapService} from "./mapService";
 
 export function MapComponent() {
   const CURRENT_LOCATION = getCurrentLocation();
@@ -25,7 +25,6 @@ export function MapComponent() {
   // 장소 목록 중 하나를 선택했을 때 데이터 가공 및 가이드 (2번 Service 파일 호출)
   const handleSelectPlace = (place: Place) => {
     setSelectedPlace(place);
-    logSelectedPlaceDetails(place);
 
     // 중간 중심축 계산 기능 호출 후 상태 반영
     const nextCenter = calculateCenterCoordinate(
