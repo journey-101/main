@@ -1,5 +1,5 @@
 export interface Place {
-  id: number;
+  id: string | number;
   name: string;
   address: string;
   lat: number;
@@ -55,23 +55,26 @@ const getApiBaseUrl = (): string => {
 };
 
 const normalizePlace = (raw: any): Place => ({
-  id: Number(raw.id ?? raw.provider_place_id ?? raw.place_id ?? Date.now()),
-  name: raw.name ?? '이름 없음',
-  address: raw.address ?? '',
-  lat: Number(raw.lat ?? 0),
-  lng: Number(raw.lng ?? 0),
+  id: raw.id ?? raw.provider_place_id ?? raw.place_id ?? Date.now(),
+  name: raw.name ?? raw.place_name ?? "이름 없음",
+  address: raw.address ?? raw.road_address ?? raw.addr ?? "",
+  lat: Number(raw.lat ?? raw.latitude ?? 0),
+  lng: Number(raw.lng ?? raw.longitude ?? 0),
 });
 
 const normalizePlaceResponse = (payload: any): Place[] => {
-  if (Array.isArray(payload)) {
-    return payload.map(normalizePlace);
-  }
-  if (payload && Array.isArray(payload.items)) {
-    return payload.items.map(normalizePlace);
-  }
-  if (payload && Array.isArray(payload.data)) {
-    return payload.data.map(normalizePlace);
-  }
+  if (Array.isArray(payload))
+    {return payload.map(normalizePlace);}
+
+  const items =
+    payload?.data?.items ??
+    payload?.items ??
+    payload?.data?.results ??
+    [];
+
+  if (Array.isArray(items))
+    {return items.map(normalizePlace);}
+
   return [];
 };
 
