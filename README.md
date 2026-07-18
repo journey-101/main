@@ -52,6 +52,8 @@ http://localhost:5173
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`: PostgreSQL 초기값
 - `POSTGRES_HOST`, `POSTGRES_PORT`: backend 컨테이너 내부 DB 접속 정보
 - `POSTGRES_HOST_PORT`: 로컬 머신에 노출할 PostgreSQL 포트
+- `CORS_ALLOWED_ORIGINS`: backend가 허용할 프론트엔드 origin 목록
+- `CORS_ALLOW_CREDENTIALS`: 인증 쿠키/세션이 필요할 때만 `true`
 
 ## API
 
@@ -79,6 +81,11 @@ Backend 테스트는 uv 기반으로 실행합니다.
 cd backend
 uv run pytest
 ```
+
+프론트엔드 개발 서버(`http://localhost:5173`)에서 backend(`http://localhost:8000`)
+로 직접 접근하는 경우를 대비해 backend는 기본적으로 개발용 CORS origin을
+허용합니다. 현재 저장소의 프론트엔드 API 호출은 상대 경로(`/api/...`)를 사용하고,
+Vite 개발 서버 프록시가 `/api`를 backend로 전달합니다.
 
 ## 확장 규칙
 
