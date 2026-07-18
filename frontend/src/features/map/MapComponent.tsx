@@ -11,27 +11,34 @@ export function MapComponent() {
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [center, setCenter] = useState({ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng });
   const [mapInstance, setMapInstance] = useState<any>(null);
+  const [placeError, setPlaceError] = useState<string | null>(null);
 
   // '오늘의 여행' 버튼 클릭 시 데이터 가져오기 (1번 API 파일 호출)
   const handleFetchPlaces = async () => {
-    console.log("========================================");
     console.log("[프론트엔드 액션] '오늘의 여행' 버튼 클릭됨");
-    console.log("========================================");
-    
-    const data = await fetchPlacesFromApi();
-    setPlaces(data);
+
+    setPlaceError(null);
+    try {
+      const data = await fetchPlacesFromApi();
+      setPlaces(data);
+      setSelectedPlace(null);
+      setCenter({ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng });
+    } catch (error) {
+      console.error(error);
+      setPlaceError("장소 데이터를 불러오지 못했습니다.");
+    }
   };
 
   // 장소 목록 중 하나를 선택했을 때 데이터 가공 및 가이드 (2번 Service 파일 호출)
   const handleSelectPlace = (place: Place) => {
-    setSelectedPlace(place);
+    const selectedRoutePlace: Place = place;
+    setSelectedPlace(selectedRoutePlace);
 
-    // 중간 중심축 계산 기능 호출 후 상태 반영
     const nextCenter = calculateCenterCoordinate(
       CURRENT_LOCATION.lat,
       CURRENT_LOCATION.lng,
-      place.lat,
-      place.lng
+      selectedRoutePlace.lat,
+      selectedRoutePlace.lng
     );
     setCenter(nextCenter);
   };
@@ -52,6 +59,7 @@ export function MapComponent() {
     setPlaces([]);
     setSelectedPlace(null);
     setCenter({ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng });
+    setPlaceError(null);
   };
 
   // 여정 목업 데이터
@@ -174,24 +182,58 @@ export function MapComponent() {
         ) : (
           <>
             <span style={{ fontSize: "13px", fontWeight: "bold", color: "#555" }}>목적지 선택:</span>
-            {places.map((place) => (
-              <button
-                key={place.id}
-                onClick={() => handleSelectPlace(place)}
+            {/* 6) UI에 장소 목록 카드 형태로 표시 */}
+            {places.length > 0 && (
+              <div
                 style={{
-                  padding: "8px 16px",
-                  backgroundColor: selectedPlace?.id === place.id ? "#ff5656" : "#fff",
-                  color: selectedPlace?.id === place.id ? "#fff" : "#333",
-                  border: "1px solid #e0e0e0",
-                  borderRadius: "20px",
-                  cursor: "pointer",
-                  fontWeight: "bold",
-                  fontSize: "13px"
+                  position: "absolute",
+                  bottom: "20px",
+                  left: "20px",
+                  zIndex: 10,
+                  width: "320px",
+                  maxHeight: "280px",
+                  overflowY: "auto",
+                  backgroundColor: "rgba(255, 255, 255, 0.95)",
+                  borderRadius: "16px",
+                  padding: "14px",
+                  boxShadow: "0 6px 20px rgba(0,0,0,0.18)",
                 }}
               >
-                {place.name}
-              </button>
-            ))}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                  <strong style={{ fontSize: "14px" }}>추천 장소</strong>
+                  <span style={{ fontSize: "12px", color: "#64748b" }}>{places.length}개</span>
+                </div>
+
+                {placeError && (
+                  <div style={{ color: "#dc2626", fontSize: "12px", marginBottom: "8px" }}>
+                    {placeError}
+                  </div>
+                )}
+
+                {places.map((place) => (
+                  <button
+                    key={place.id}
+                    onClick={() => handleSelectPlace(place)}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "8px 10px",
+                      marginBottom: "8px",
+                      borderRadius: "10px",
+                      border: selectedPlace?.id === place.id ? "1px solid #ff5656" : "1px solid #e2e8f0",
+                      backgroundColor: selectedPlace?.id === place.id ? "#fff5f5" : "#fff",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div style={{ fontWeight: "bold", fontSize: "13px", color: "#111827" }}>{place.name}</div>
+                    <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
+                      {place.address || "주소 정보 없음"}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
             <button onClick={handleReset} style={{ padding: "8px 12px", backgroundColor: "#eee", border: "none", borderRadius: "20px", cursor: "pointer", fontSize: "12px", color: "#333" }}>
               닫기
             </button>
@@ -208,20 +250,29 @@ export function MapComponent() {
       >
         {/* 출발지 마커 */}
         <MapMarker position={{ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng }}>
-          <div style={{ padding: "5px", color: "#000", fontWeight: "bold", fontSize: "12px" }}>출발: 서울시청</div>
+          <div style={{ padding: "5px", color: "#000", fontWeight: "bold", fontSize: "12px" }}>출발: 인천지방법원부천지원</div>
         </MapMarker>
 
         {/* 가이드 라인 그리기 */}
-        <Polyline
-          path={selectedPlace ? [
-            { lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng },
-            { lat: selectedPlace.lat, lng: selectedPlace.lng }
-          ] : []}
-          strokeWeight={6}
-          strokeColor={"#ff5656"}
-          strokeOpacity={0.85}
-          strokeStyle={"solid"}
-        />
+        {selectedPlace && (
+          <>
+            <Polyline
+              path={[
+                { lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng },
+                { lat: selectedPlace.lat, lng: selectedPlace.lng },
+              ]}
+              strokeWeight={6}
+              strokeColor={"#ff5656"}
+              strokeOpacity={0.85}
+              strokeStyle={"solid"}
+            />
+            <MapMarker position={{ lat: selectedPlace.lat, lng: selectedPlace.lng }}>
+              <div style={{ padding: "5px", color: "#000", fontWeight: "bold", fontSize: "12px" }}>
+                {selectedPlace.name}
+              </div>
+            </MapMarker>
+          </>
+        )}
       </Map>
 
       {/* 1단계: 여정 생성 */}

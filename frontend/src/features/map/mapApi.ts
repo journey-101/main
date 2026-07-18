@@ -7,7 +7,7 @@ export interface Place {
 }
 
 // 임의의 고정 사용자 현위치 데이터
-const CURRENT_LOCATION = { name: "서울시청", lat: 37.5665, lng: 126.9780 };
+const CURRENT_LOCATION = { name: "인천지방법원부천지원", lat: 37.4938, lng: 126.7513 };
 
 // trips attempt type 관리 및 patch용 선언
 export type TripAttemptStatus = 'started' | 'completed' | 'aborted';
