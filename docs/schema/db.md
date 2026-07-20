@@ -1,9 +1,10 @@
 # DB 스키마
 
-변경일: 2026-06-27  
-변경 브랜치: `feat/14-trip`
+변경일: 2026-07-20
+변경 브랜치: `dev`
 
-이 문서는 현재 코드베이스의 DB 스키마를 기준으로 작성한다. 초기화 SQL은 `backend/db/init/001_trips.sql`에 있다.
+이 문서는 현재 코드베이스의 DB 스키마를 기준으로 작성한다. 초기화 SQL은
+`backend/db/init/001_trips.sql`, `backend/db/init/002_user_preferences.sql`에 있다.
 
 ## ER 다이어그램
 
@@ -11,6 +12,7 @@
 erDiagram
     app_users ||--o{ trips : owns
     trips ||--o{ trip_attempts : has
+    app_users ||--o| user_preferences : has
 
     app_users {
         uuid id PK
@@ -28,6 +30,16 @@ erDiagram
         text status
         text feedback_text
         timestamptz created_at
+    }
+
+    user_preferences {
+        uuid user_id PK
+        text preferred_categories
+        text avoided_categories
+        boolean prefers_quiet
+        integer max_walk_minutes
+        boolean is_first_time_traveler
+        timestamptz updated_at
     }
 ```
 
@@ -65,6 +77,20 @@ erDiagram
 
 `status`는 DB에서는 `text`로 저장한다. API 계층에서는 `started`, `completed`, `aborted`만 허용한다.
 
+### user_preferences
+
+사용자별 여행 성향을 저장한다. category 목록은 JSON 문자열로 저장한다.
+
+| 컬럼 | 타입 | 제약 |
+| --- | --- | --- |
+| `user_id` | `uuid` | primary key, references `app_users(id)` |
+| `preferred_categories` | `text` | not null |
+| `avoided_categories` | `text` | not null |
+| `prefers_quiet` | `boolean` | not null |
+| `max_walk_minutes` | `integer` | not null |
+| `is_first_time_traveler` | `boolean` | not null |
+| `updated_at` | `timestamptz` | not null, default `now()` |
+
 ## 초기 데이터
 
 개발/검증용 고정 사용자를 생성한다.
@@ -79,3 +105,5 @@ erDiagram
 trip id: 10000000-0000-0000-0000-000000000001
 attempt id: 20000000-0000-0000-0000-000000000001
 ```
+
+개발/검증용 고정 사용자에 대한 기본 `user_preferences`를 생성한다.
