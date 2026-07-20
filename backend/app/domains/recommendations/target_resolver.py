@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.domains.places import service as places_service
+from app.domains.places import repository as places_repository
 from app.domains.recommendations import repository
 from app.domains.recommendations.schemas import (
     PlaceRecommendationTarget,
@@ -46,7 +46,7 @@ def resolve_target(
 ) -> ResolvedRecommendationTarget:
     if isinstance(target, PlaceRecommendationTarget):
         return ResolvedRecommendationTarget(
-            candidates=_place_candidates(target.region_code),
+            candidates=_place_candidates(session, target.region_code),
             fallback=RecommendationFallbackData(used=False),
         )
 
@@ -55,7 +55,7 @@ def resolve_target(
     if trip is None or str(trip["user_id"]) != str(user_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
     return ResolvedRecommendationTarget(
-        candidates=_place_candidates(None),
+        candidates=_place_candidates(session, None),
         fallback=RecommendationFallbackData(
             used=True,
             reason="trip_place_not_available",
@@ -64,18 +64,20 @@ def resolve_target(
     )
 
 
-def _place_candidates(region_code: str | None) -> list[CandidatePlace]:
-    places = places_service._load_places()
+def _place_candidates(session: Session, region_code: str | None) -> list[CandidatePlace]:
+    places = places_repository.list_places(session)
     if region_code is not None:
-        places = [place for place in places if place.region_code == region_code]
+        places = [place for place in places if place["region_code"] == region_code]
     candidates: list[CandidatePlace] = []
     for place in places:
-        metadata = DEFAULT_METADATA | PLACE_RECOMMENDATION_METADATA.get(str(place.id), {})
+        metadata = DEFAULT_METADATA | PLACE_RECOMMENDATION_METADATA.get(
+            str(place["id"]), {}
+        )
         candidates.append(
             CandidatePlace(
-                id=place.id,
-                name=place.name,
-                category=place.category,
+                id=place["id"],
+                name=place["name"],
+                category=place["category"],
                 quiet_score=metadata["quiet_score"],
                 walk_minutes=metadata["walk_minutes"],
                 beginner_friendly=metadata["beginner_friendly"],

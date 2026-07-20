@@ -20,10 +20,50 @@ def client() -> Generator[TestClient, None, None]:
     session_factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
     with engine.begin() as connection:
         connection.execute(text("create table app_users (id text primary key)"))
+        connection.execute(
+            text(
+                """
+                create table places (
+                    id text primary key, provider text not null,
+                    provider_place_id text not null, name text not null,
+                    category text not null, tags text not null, address text not null,
+                    region_code text not null, lat real not null, lng real not null,
+                    opening_hours text not null, price_level integer not null,
+                    phone text, source_url text not null
+                )
+                """
+            )
+        )
         connection.execute(text("create table trips (id text primary key, user_id text not null, title text not null)"))
         connection.execute(text("create table trip_attempts (id text primary key, trip_id text not null, status text not null, feedback_text text, created_at timestamp)"))
         connection.execute(text("create table user_preferences (user_id text primary key, preferred_categories text not null, avoided_categories text not null, prefers_quiet boolean not null, max_walk_minutes integer not null, is_first_time_traveler boolean not null, updated_at timestamp default current_timestamp)"))
         connection.execute(text("insert into app_users (id) values (:id), (:other_id)"), {"id": USER_ID, "other_id": OTHER_USER_ID})
+        for place_id, provider_place_id, name, category in [
+            ("30000000-0000-0000-0000-000000000001", "bucheon-001", "한국만화박물관", "museum"),
+            ("30000000-0000-0000-0000-000000000002", "bucheon-002", "상동호수공원", "park"),
+            ("30000000-0000-0000-0000-000000000003", "bucheon-003", "부천아트센터", "concert_hall"),
+        ]:
+            connection.execute(
+                text(
+                    """
+                    insert into places (
+                        id, provider, provider_place_id, name, category, tags,
+                        address, region_code, lat, lng, opening_hours, price_level,
+                        phone, source_url
+                    ) values (
+                        :id, 'mock', :provider_place_id, :name, :category, '[]',
+                        'test address', 'KR-41', 37.5, 126.7, '{}', 0, null,
+                        'https://example.com'
+                    )
+                    """
+                ),
+                {
+                    "id": place_id,
+                    "provider_place_id": provider_place_id,
+                    "name": name,
+                    "category": category,
+                },
+            )
         connection.execute(text("insert into trips (id, user_id, title) values (:id, :user_id, :title)"), {"id": TRIP_ID, "user_id": USER_ID, "title": "북촌 산책"})
         connection.execute(text("insert into user_preferences (user_id, preferred_categories, avoided_categories, prefers_quiet, max_walk_minutes, is_first_time_traveler) values (:user_id, :preferred, :avoided, :quiet, :walk, :first_time)"), {"user_id": USER_ID, "preferred": '[\"museum\", \"park\"]', "avoided": '[\"concert_hall\"]', "quiet": True, "walk": 20, "first_time": True})
 
