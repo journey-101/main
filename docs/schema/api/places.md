@@ -1,10 +1,11 @@
 # Places API 계약
 
-변경일: 2026-07-05  
-변경 브랜치: `feat/13-place_basic`
+변경일: 2026-07-12
 
-기본 경로는 `/api/v1/places`다. 현재 구현은 JSON 목업 데이터 파일을
-읽어 장소 목록과 상세 정보를 반환한다.
+변경 브랜치: `feat/21-placeDB-migration`
+
+기본 경로는 `/api/v1/places`다. 장소 데이터는 PostgreSQL `places`
+테이블에서 조회한다.
 
 ## 장소 검색
 
@@ -26,9 +27,12 @@ cursor=
 ```
 
 - 모든 query는 선택 값이다.
+- 요청 body는 사용하지 않으며 검색 조건은 URL query parameter로 전달한다.
 - `lat`, `lng`, `radius_m`는 함께 전달해야 한다.
 - `limit`은 `1` 이상 `100` 이하이며 기본값은 `20`이다.
-- `cursor`는 계약 호환을 위해 받지만 목업 구현에서는 사용하지 않는다.
+- `cursor`는 계약 호환을 위해 받지만 현재 구현에서는 사용하지 않는다.
+- 현재 구현은 조건에 맞는 장소를 최대 `limit`개 반환하며
+  `next_cursor`는 항상 `null`이다.
 
 응답 `data`:
 
@@ -90,5 +94,6 @@ GET /api/v1/places/{place_id}
 ## 검증 및 데이터 오류
 
 - UUID 또는 query 형식이 잘못되면 `422`를 반환한다.
-- 목업 파일을 읽거나 검증할 수 없으면
+- DB에서 장소를 조회할 수 없거나 조회한 데이터를 API 응답 모델로
+  변환할 수 없으면
   `500 {"detail": "Unknown place data error"}`를 반환한다.

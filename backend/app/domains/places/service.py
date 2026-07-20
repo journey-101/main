@@ -1,12 +1,12 @@
 import json
-from json import JSONDecodeError
 from math import asin, cos, radians, sin, sqrt
-from pathlib import Path
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from pydantic import TypeAdapter, ValidationError
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
+from app.domains.places import repository
 from app.domains.places.schemas import (
     PlaceDetailData,
     PlaceListItemData,
@@ -14,12 +14,11 @@ from app.domains.places.schemas import (
     PlaceSearchQuery,
 )
 
-DATA_FILE = Path(__file__).parent / "data" / "places.json"
-PLACE_LIST_ADAPTER = TypeAdapter(list[PlaceDetailData])
-
-
-def search_places(query: PlaceSearchQuery) -> PlaceSearchData:
-    places = _load_places()
+def search_places(session: Session, query: PlaceSearchQuery) -> PlaceSearchData:
+    try:
+        places = [_map_place(row) for row in repository.list_places(session)]
+    except (SQLAlchemyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise _unknown_data_error() from exc
 
     if query.q is not None:
         keyword = query.q.casefold()
@@ -50,26 +49,39 @@ def search_places(query: PlaceSearchQuery) -> PlaceSearchData:
     )
 
 
-def get_place_detail(place_id: UUID) -> PlaceDetailData:
-    for place in _load_places():
-        if place.id == place_id:
-            return place
+def get_place_detail(session: Session, place_id: UUID) -> PlaceDetailData:
+    try:
+        row = repository.get_place(session, place_id)
+        if row is not None:
+            return _map_place(row)
+    except (SQLAlchemyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise _unknown_data_error() from exc
 
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="Place not found",
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Place not found")
+
+
+def _map_place(row: object) -> PlaceDetailData:
+    tags = row["tags"]
+    opening_hours = row["opening_hours"]
+    if isinstance(tags, str):
+        tags = json.loads(tags)
+    if isinstance(opening_hours, str):
+        opening_hours = json.loads(opening_hours)
+    return PlaceDetailData(
+        id=row["id"], provider=row["provider"],
+        provider_place_id=row["provider_place_id"], name=row["name"],
+        category=row["category"], tags=tags, address=row["address"],
+        region_code=row["region_code"], lat=row["lat"], lng=row["lng"],
+        opening_hours=opening_hours, price_level=row["price_level"],
+        phone=row["phone"], source_url=row["source_url"],
     )
 
 
-def _load_places() -> list[PlaceDetailData]:
-    try:
-        raw_places = json.loads(DATA_FILE.read_text(encoding="utf-8"))
-        return PLACE_LIST_ADAPTER.validate_python(raw_places)
-    except (OSError, JSONDecodeError, ValidationError, TypeError) as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Unknown place data error",
-        ) from exc
+def _unknown_data_error() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Unknown place data error",
+    )
 
 
 def _to_list_item(place: PlaceDetailData) -> PlaceListItemData:
