@@ -1,11 +1,11 @@
 # DB 스키마
 
-변경일: 2026-07-12
-
-변경 브랜치: `feat/21-placeDB-migration`
+변경일: 2026-07-20
+변경 브랜치: `feat/23-user-preferences-recommendations`
 
 이 문서는 현재 코드베이스의 DB 스키마를 기준으로 작성한다. 초기화 SQL은
-`backend/db/init/001_trips.sql`과 `backend/db/init/002_places.sql`에 있다.
+`backend/db/init/001_trips.sql`, `backend/db/init/002_places.sql`,
+`backend/db/init/003_user_preferences.sql`에 있다.
 
 ## ER 다이어그램
 
@@ -13,6 +13,7 @@
 erDiagram
     app_users ||--o{ trips : owns
     trips ||--o{ trip_attempts : has
+    app_users ||--o| user_preferences : has
 
     app_users {
         uuid id PK
@@ -47,6 +48,16 @@ erDiagram
         integer price_level
         text phone
         text source_url
+    }
+
+    user_preferences {
+        uuid user_id PK
+        text preferred_categories
+        text avoided_categories
+        boolean prefers_quiet
+        integer max_walk_minutes
+        boolean is_first_time_traveler
+        timestamptz updated_at
     }
 ```
 
@@ -108,6 +119,20 @@ erDiagram
 
 `provider`와 `provider_place_id`의 조합은 유일해야 한다.
 
+### user_preferences
+
+사용자별 여행 성향을 저장한다. category 목록은 JSON 문자열로 저장한다.
+
+| 컬럼 | 타입 | 제약 |
+| --- | --- | --- |
+| `user_id` | `uuid` | primary key, references `app_users(id)` |
+| `preferred_categories` | `text` | not null |
+| `avoided_categories` | `text` | not null |
+| `prefers_quiet` | `boolean` | not null |
+| `max_walk_minutes` | `integer` | not null |
+| `is_first_time_traveler` | `boolean` | not null |
+| `updated_at` | `timestamptz` | not null, default `now()` |
+
 ## 초기 데이터
 
 개발/검증용 고정 사용자를 생성한다.
@@ -130,3 +155,5 @@ attempt id: 20000000-0000-0000-0000-000000000001
 | `30000000-0000-0000-0000-000000000001` | 한국만화박물관 | `museum` |
 | `30000000-0000-0000-0000-000000000002` | 상동호수공원 | `park` |
 | `30000000-0000-0000-0000-000000000003` | 부천아트센터 | `concert_hall` |
+
+개발/검증용 고정 사용자에 대한 기본 `user_preferences`를 생성한다.

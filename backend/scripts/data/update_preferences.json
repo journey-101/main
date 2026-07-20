@@ -1,0 +1,8 @@
+{
+  "user_id": "00000000-0000-0000-0000-000000000000",
+  "preferred_categories": ["park"],
+  "avoided_categories": ["concert_hall"],
+  "prefers_quiet": true,
+  "max_walk_minutes": 20,
+  "is_first_time_traveler": true
+}
