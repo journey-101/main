@@ -1,8 +1,10 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
 
+from app.db.session import get_db_session
 from app.domains.health.schemas import SuccessResponse
 from app.domains.places.schemas import (
     PlaceDetailData,
@@ -20,10 +22,14 @@ router = APIRouter()
 @router.get("/search", response_model=SuccessResponse[PlaceSearchData])
 def search_places(
     query: Annotated[PlaceSearchQuery, Query()],
+    session: Session = Depends(get_db_session),
 ) -> SuccessResponse[PlaceSearchData]:
-    return SuccessResponse(data=search_places_service(query))
+    return SuccessResponse(data=search_places_service(session, query))
 
 
 @router.get("/{place_id}", response_model=SuccessResponse[PlaceDetailData])
-def get_place(place_id: UUID) -> SuccessResponse[PlaceDetailData]:
-    return SuccessResponse(data=get_place_detail(place_id))
+def get_place(
+    place_id: UUID,
+    session: Session = Depends(get_db_session),
+) -> SuccessResponse[PlaceDetailData]:
+    return SuccessResponse(data=get_place_detail(session, place_id))
