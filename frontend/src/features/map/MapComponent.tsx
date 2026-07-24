@@ -598,5 +598,6 @@ const handleUpdateTrip = async () => {
                 </section>
               )}
             </section>
+    </div>
   );
 }
