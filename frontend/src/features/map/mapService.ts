@@ -1,65 +1,134 @@
 import {
-  Place, createTripApi, getTripByIdApi, updateTripApi, updateTripAttemptStatusApi, CreateTripRequest, TripResponse,
-} from './mapApi';
+  type CreateAttemptRequest,
+  type CreateTripRequest,
+  type TripAttempt,
+  type TripDetail,
+  type TripListItem,
+  type UpdateAttemptRequest,
+  type UpdateFeedbackRequest,
+  type UpdateTripRequest,
+  createTripApi,
+  createTripAttemptApi,
+  getTripByIdApi,
+  getTripsApi,
+  updateTripApi,
+  updateTripAttemptApi,
+  updateTripFeedbackApi,
+} from "./mapApi";
 
-// 출발지와 목적지 좌표를 바탕으로 지도의 중간 중심축 좌표를 계산하는 함수
-export const calculateCenterCoordinate = (startLat: number, startLng: number, endLat: number, endLng: number) => {
+export const calculateCenterCoordinate = (
+  startLat: number,
+  startLng: number,
+  endLat: number,
+  endLng: number,
+) => {
   const centerLat = (startLat + endLat) / 2;
   const centerLng = (startLng + endLng) / 2;
-  return { lat: centerLat, lng: centerLng };
+
+  return {
+    lat: centerLat,
+    lng: centerLng,
+  };
+};
+
+const logApiError = (error: unknown, action: string) => {
+  console.error(`Trips API ${action} failed`, error);
 };
 
 export const mapService = {
-  // 1. 여정 등록 실행
-  registerTrip: async (tripData: CreateTripRequest): Promise<TripResponse | null> => {
+  getTrips: async (): Promise<TripListItem[] | null> => {
+    try {
+      const response = await getTripsApi();
+      return response.success ? response.data : null;
+    } catch (error) {
+      logApiError(error, "list");
+      return null;
+    }
+  },
+
+  registerTrip: async (
+    tripData: CreateTripRequest,
+  ): Promise<TripListItem | null> => {
     try {
       const response = await createTripApi(tripData);
       return response.success ? response.data : null;
     } catch (error) {
-      console.error('Service Error - registerTrip:', error);
-      throw error;
+      logApiError(error, "create");
+      return null;
     }
   },
 
-  // 2. 단건 여정 상세 조회 (/trips/{trips_id})
-  getTripDetails: async (tripsId: string): Promise<TripResponse | null> => {
+  getTripDetails: async (tripId: string): Promise<TripDetail | null> => {
     try {
-      const response = await getTripByIdApi(tripsId);
+      const response = await getTripByIdApi(tripId);
       return response.success ? response.data : null;
     } catch (error) {
-      console.error('Service Error - getTripDetails:', error);
-      throw error;
+      logApiError(error, "detail");
+      return null;
     }
   },
 
-  // 3. 동일 경로 여정 수정 (후기 태그 등 업데이트)
-  modifyTrip: async (tripsId: string, fieldsToUpdate: Partial<TripResponse>): Promise<TripResponse | null> => {
+  modifyTrip: async (
+    tripId: string,
+    tripData: UpdateTripRequest,
+  ): Promise<TripListItem | null> => {
     try {
-      const response = await updateTripApi(tripsId, fieldsToUpdate);
+      const response = await updateTripApi(tripId, tripData);
       return response.success ? response.data : null;
     } catch (error) {
-      console.error('Service Error - modifyTrip:', error);
-      throw error;
+      logApiError(error, "trip update");
+      return null;
     }
   },
 
-  completeTripAttempt: async (tripsId: string): Promise<TripResponse | null> => {
+  createAttempt: async (
+    tripId: string,
+    attemptData: CreateAttemptRequest = {},
+  ): Promise<TripAttempt | null> => {
     try {
-      const response = await updateTripAttemptStatusApi(tripsId, 'completed');
+      const response = await createTripAttemptApi(tripId, attemptData);
       return response.success ? response.data : null;
     } catch (error) {
-      console.error('Service Error - completeTripAttempt:', error);
-      throw error;
+      logApiError(error, "attempt create");
+      return null;
     }
   },
-  
-  abortTripAttempt: async (tripsId: string): Promise<TripResponse | null> => {
+
+  modifyAttempt: async (
+    tripId: string,
+    attemptId: string,
+    attemptData: UpdateAttemptRequest,
+  ): Promise<TripAttempt | null> => {
     try {
-      const response = await updateTripAttemptStatusApi(tripsId, 'aborted');
+      const response = await updateTripAttemptApi(
+        tripId,
+        attemptId,
+        attemptData,
+      );
+
       return response.success ? response.data : null;
     } catch (error) {
-      console.error('Service Error - abortTripAttempt:', error);
-      throw error;
+      logApiError(error, "attempt update");
+      return null;
+    }
+  },
+
+  modifyFeedback: async (
+    tripId: string,
+    attemptId: string,
+    feedbackData: UpdateFeedbackRequest,
+  ): Promise<TripAttempt | null> => {
+    try {
+      const response = await updateTripFeedbackApi(
+        tripId,
+        attemptId,
+        feedbackData,
+      );
+
+      return response.success ? response.data : null;
+    } catch (error) {
+      logApiError(error, "feedback update");
+      return null;
     }
   },
 };

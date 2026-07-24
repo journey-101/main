@@ -1,7 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Map, MapMarker, Polyline } from "react-kakao-maps-sdk";
-import { Place, fetchPlacesFromApi, getCurrentLocation, CreateTripRequest, TripResponse } from "./mapApi";
-import { calculateCenterCoordinate, mapService} from "./mapService";
+import {
+  type CreateTripRequest,
+  type Place,
+  type TripAttemptStatus,
+  type TripDetail,
+  type TripListItem,
+  fetchPlacesFromApi,
+  getCurrentLocation,
+} from "./mapApi";
+import { calculateCenterCoordinate, mapService } from "./mapService";
 
 export function MapComponent() {
   const CURRENT_LOCATION = getCurrentLocation();
@@ -64,64 +72,142 @@ export function MapComponent() {
 
   // 여정 목업 데이터
   const [tripFormData, setTripFormData] = useState<CreateTripRequest>({
-    title: '서울 혼자 연습 여행',
-    origin_region_code: 'KR-41',
-    destination_region_code: 'KR-11',
+    user_id: import.meta.env.VITE_TEST_USER_ID as string,
+    title: "",
   });
+  const [tripTitle, setTripTitle] = useState("");
+  const [attemptStatus, setAttemptStatus] =
+    useState<TripAttemptStatus>("started");
+  const [feedbackText, setFeedbackText] = useState("");
+  const [tagInput, setTagInput] = useState("");
 
-  // 조회 및 검증 단계 흐름 제어용 상탯값
-  const [lastCreatedId, setLastCreatedId] = useState<string>(''); // 생성된 uuid 보관
-  const [fetchedTrip, setFetchedTrip] = useState<TripResponse | null>(null); // GET 결과 보관
-  const [tagInput, setTagInput] = useState<string>(''); // 추가할 후기 태그 문자열
+  useEffect(() => {
+    const loadTrips = async () => {
+      const result = await mapService.getTrips();
 
-  // 폼 필드 입력 헬퍼 함수
-  const handleFieldChange = (key: keyof CreateTripRequest, value: any) => {
-    setTripFormData((prev) => ({ ...prev, [key]: value }));
+      if (result) {
+        setTrips(result);
+      }
+    };
+
+    void loadTrips();
+  }, []);
+
+  const getCurrentAttempt = () => {
+    if (!selectedTrip || selectedTrip.attempts.length === 0) {
+      return null;
+    }
+
+    return selectedTrip.attempts[0];
   };
 
-  // 여정 POST 호출
-  const handlePostTrip = async () => {
-    console.log('[UI Action] 목적지 선택 완료 -> 여정 생성(POST) 호출');
+  const refreshSelectedTrip = async (tripId: string) => {
+    const detail = await mapService.getTripDetails(tripId);
+
+    if (detail) {
+      setSelectedTrip(detail);
+      setTripTitle(detail.title);
+
+      const attempt = detail.attempts[0];
+
+      if (attempt) {
+        setAttemptStatus(attempt.status);
+        setFeedbackText(attempt.feedback_text ?? "");
+      }
+    }
+  };
+
+  const handleCreateTrip = async () => {
     const result = await mapService.registerTrip(tripFormData);
-    
-    if (result) {
-      setLastCreatedId(result.id);
-      setFetchedTrip(result);
-      alert(`여정이 성공적으로 POST 되었습니다!\n생성된 uuid: ${result.id}\n이제 2단계 조회를 진행하세요.`);
-    }
-  };
 
-  // 여정 GET 호출
-  const handleGetTrip = async () => {
-    if (!lastCreatedId) {
-      alert('생성된 여정 uuid가 없습니다. 먼저 1단계 여정 생성을 실행해 주세요.');
+    if (!result) {
       return;
     }
 
-    console.log(`[UI Action] 여정 조회(GET) 호출 -> ID: ${lastCreatedId}`);
-    const result = await mapService.getTripDetails(lastCreatedId);
-    
+    setTrips((prev) => [result, ...prev]);
+    await refreshSelectedTrip(result.id);
+  };
+
+  const handleSelectTrip = async (trip: TripListItem) => {
+    setSelectedTrip(null);
+    await refreshSelectedTrip(trip.id);
+  };
+
+  const handleUpdateTripTitle = async () => {
+    if (!selectedTrip) {
+      return;
+    }
+
+    const result = await mapService.modifyTrip(selectedTrip.id, {
+      title: tripTitle,
+    });
+
     if (result) {
-      setFetchedTrip(result);
+      setTrips((prev) =>
+        prev.map((trip) => (trip.id === result.id ? result : trip)),
+      );
+
+      await refreshSelectedTrip(result.id);
     }
   };
 
-  // 여정 PATCH 호출
-  const handlePatchTripTags = async () => {
-    if (!fetchedTrip) {
-      alert('조회된 여정 데이터가 없습니다. 먼저 2단계 조회를 실행해 주세요.');
+  const handleUpdateAttempt = async () => {
+    const attempt = getCurrentAttempt();
+
+    if (!selectedTrip || !attempt) {
       return;
     }
-    if (!tagInput.trim()) return;
 
-    const updatedTags = [...fetchedTrip.feedback_text, tagInput.trim()];
-    console.log(`[UI Action] 여정 후기 태그 수정(PATCH) 호출 -> ID: ${fetchedTrip.id}`);
+    const result = await mapService.modifyAttempt(
+      selectedTrip.id,
+      attempt.id,
+      {
+        status: attemptStatus,
+        feedback_text: feedbackText,
+      },
+    );
 
-    const result = await mapService.modifyTrip(fetchedTrip.id, { feedback_text: updatedTags });
     if (result) {
-      setFetchedTrip(result);
-      setTagInput('');
+      await refreshSelectedTrip(selectedTrip.id);
     }
+  };
+
+  const handleUpdateFeedback = async () => {
+    const attempt = getCurrentAttempt();
+
+    if (!selectedTrip || !attempt) {
+      return;
+    }
+
+    const result = await mapService.modifyFeedback(
+      selectedTrip.id,
+      attempt.id,
+      {
+        feedback_text: feedbackText,
+      },
+    );
+
+    if (result) {
+      await refreshSelectedTrip(selectedTrip.id);
+    }
+  };
+
+  const handleAddUserTag = () => {
+    const normalizedTag = tagInput.trim();
+
+    if (!normalizedTag) {
+      return;
+    }
+
+    setFeedbackText((prev) => {
+      if (!prev.trim()) {
+        return `#${normalizedTag}`;
+      }
+
+      return `${prev.trim()} #${normalizedTag}`;
+    });
+
+    setTagInput("");
   };
 
   const handleCompleteAttempt = async () => {
@@ -275,86 +361,281 @@ export function MapComponent() {
         )}
       </Map>
 
-      {/* 1단계: 여정 생성 */}
-      <div style={{ marginBottom: '25px', padding: '15px', border: '1px solid #ddd', borderRadius: '6px' }}>
-        <h3 style={{ margin: '0 0 10px 0', color: '#e67e22' }}>1. 여정 생성 (POST /trips)</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px', fontSize: '14px' }}>
-          <label>여행 제목: <input type="text" value={tripFormData.title} onChange={e => handleFieldChange('title', e.target.value)} /></label>
-        </div>
-        <button onClick={handlePostTrip} style={{ padding: '8px 16px', backgroundColor: '#e67e22', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
-          목적지 선택 및 여정 생성 (POST)
-        </button>
-      </div>
-
-      {/* 2단계 및 3단계: 조회 및 동일 경로 수정 */}
-      <div style={{ padding: '15px', border: '1px solid #2980b9', borderRadius: '6px', backgroundColor: '#f4f9fc' }}>
-        <h3 style={{ margin: '0 0 10px 0', color: '#2980b9' }}>2 & 3. 여정 상세조회 및 태그 수정 (/trips/{"{uuid}"})</h3>
-        
-        <div style={{ marginBottom: '15px' }}>
-          <button onClick={handleGetTrip} style={{ padding: '8px 16px', backgroundColor: '#2980b9', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', marginRight: '10px' }}>
-            여정 상세 조회 (GET)
-          </button>
-        </div>
-
-        {fetchedTrip ? (
-          <div style={{ background: '#fff', padding: '15px', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
-            <h4 style={{ margin: '0 0 8px 0' }}>📄 백엔드 수신 데이터 결과</h4>
-            <pre style={{ background: '#f8fafc', padding: '10px', borderRadius: '4px', fontSize: '12px', overflowX: 'auto' }}>
-              {JSON.stringify(fetchedTrip, null, 2)}
-            </pre>
-
-            <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed #cbd5e1' }}>
-              <div
+            <section
                 style={{
-                  marginBottom: '10px',
-                  fontWeight: 'bold',
-                  color:
-                    fetchedTrip.attemptStatus === 'completed'
-                      ? '#059669'
-                      : fetchedTrip.attemptStatus === 'aborted'
-                      ? '#dc2626'
-                      : '#d97706',
+                  marginTop: "24px",
+                  padding: "16px",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  backgroundColor: "#ffffff",
                 }}
               >
-                현재 attempt 상태: {fetchedTrip.attemptStatus ?? 'started'}
-              </div>
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                <button onClick={handleCompleteAttempt} style={{ padding: '8px 12px', backgroundColor: '#059669', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                  완료
-                </button>
-                <button onClick={handleAbortAttempt} style={{ padding: '8px 12px', backgroundColor: '#dc2626', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                  일시중단
-                </button>
-              </div>
-            </div>
+              <h2 style={{ margin: "0 0 12px" }}>Trips</h2>
 
-            <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed #cbd5e1' }}>
-              <h4 style={{ margin: '0 0 8px 0' }}>🏷️ 후기 태그 수집용 컴포넌트</h4>
-              <div style={{ marginBottom: '10px' }}>
-                {fetchedTrip.feedback_text.length === 0 ? (
-                  <span style={{ color: '#94a3b8', fontSize: '13px' }}>등록된 후기 태그가 없습니다.</span>
-                ) : (
-                  fetchedTrip.feedback_text.map((tag, idx) => (
-                    <span key={idx} style={{ backgroundColor: '#fef3c7', color: '#d97706', padding: '3px 8px', marginRight: '6px', borderRadius: '4px', fontSize: '13px', fontWeight: '5px' }}>
-                      #{tag}
-                    </span>
-                  ))
-                )}
+              <div
+                style={{
+                  display: "flex",
+                  gap: "8px",
+                  marginBottom: "16px",
+                }}
+              >
+                <input
+                  type="text"
+                  value={tripFormData.title}
+                  onChange={(event) =>
+                    setTripFormData((prev) => ({
+                      ...prev,
+                      title: event.target.value,
+                    }))
+                  }
+                  placeholder="여행 제목"
+                  style={{
+                    flex: 1,
+                    padding: "10px",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: "6px",
+                  }}
+                />
+
+                <button
+                  type="button"
+                  onClick={handleCreateTrip}
+                  style={{
+                    padding: "10px 14px",
+                    border: 0,
+                    borderRadius: "6px",
+                    backgroundColor: "#2563eb",
+                    color: "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  Trip 생성
+                </button>
               </div>
-              <input
-                type="text"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                style={{ padding: '5px', width: '160px', marginRight: '6px' }}
-              />
-              <button onClick={handlePatchTripTags} style={{ padding: '5px 12px', backgroundColor: '#059669', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                태그 저장 (PATCH)
-              </button>
-            </div>
-          </div>
-        ) : (
-          <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>여정을 먼저 생성하고 조회 버튼을 누르면 정밀 스펙이 로드됩니다.</p>
-        )}
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                  gap: "10px",
+                }}
+              >
+                {trips.map((trip) => (
+                  <button
+                    key={trip.id}
+                    type="button"
+                    onClick={() => void handleSelectTrip(trip)}
+                    style={{
+                      padding: "14px",
+                      textAlign: "left",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "10px",
+                      backgroundColor:
+                        selectedTrip?.id === trip.id ? "#eff6ff" : "#fff",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <strong>{trip.title}</strong>
+                    <div
+                      style={{
+                        marginTop: "8px",
+                        fontSize: "13px",
+                        color: "#64748b",
+                      }}
+                    >
+                      상태: {trip.current_attempt.status}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {selectedTrip && (
+                <section
+                  style={{
+                    marginTop: "20px",
+                    paddingTop: "16px",
+                    borderTop: "1px solid #e2e8f0",
+                  }}
+                >
+                  <h3 style={{ margin: "0 0 12px" }}>선택된 Trip</h3>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={tripTitle}
+                      onChange={(event) => setTripTitle(event.target.value)}
+                      style={{
+                        flex: 1,
+                        padding: "10px",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: "6px",
+                      }}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => void handleUpdateTripTitle()}
+                      style={{
+                        padding: "10px 14px",
+                        border: 0,
+                        borderRadius: "6px",
+                        backgroundColor: "#475569",
+                        color: "#fff",
+                        cursor: "pointer",
+                      }}
+                    >
+                      제목 수정
+                    </button>
+                  </div>
+
+                  {getCurrentAttempt() && (
+                    <div
+                      style={{
+                        padding: "14px",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "8px",
+                      }}
+                    >
+                      <h4 style={{ margin: "0 0 12px" }}>Attempt 수정</h4>
+
+                      <label
+                        style={{
+                          display: "block",
+                          marginBottom: "10px",
+                        }}
+                      >
+                        상태
+                        <select
+                          value={attemptStatus}
+                          onChange={(event) =>
+                            setAttemptStatus(
+                              event.target.value as TripAttemptStatus,
+                            )
+                          }
+                          style={{
+                            display: "block",
+                            marginTop: "6px",
+                            padding: "8px",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: "6px",
+                          }}
+                        >
+                          <option value="started">started</option>
+                          <option value="completed">completed</option>
+                          <option value="aborted">aborted</option>
+                        </select>
+                      </label>
+
+                      <label
+                        style={{
+                          display: "block",
+                          marginBottom: "10px",
+                        }}
+                      >
+                        후기
+                        <textarea
+                          value={feedbackText}
+                          onChange={(event) => setFeedbackText(event.target.value)}
+                          rows={4}
+                          style={{
+                            display: "block",
+                            width: "100%",
+                            marginTop: "6px",
+                            padding: "8px",
+                            boxSizing: "border-box",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: "6px",
+                            resize: "vertical",
+                          }}
+                        />
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={() => void handleUpdateAttempt()}
+                        style={{
+                          padding: "8px 12px",
+                          border: 0,
+                          borderRadius: "6px",
+                          backgroundColor: "#475569",
+                          color: "#fff",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Attempt 수정
+                      </button>
+
+                      <div
+                        style={{
+                          marginTop: "18px",
+                          paddingTop: "14px",
+                          borderTop: "1px dashed #cbd5e1",
+                        }}
+                      >
+                        <h4 style={{ margin: "0 0 10px" }}>Feedback 수정</h4>
+
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "8px",
+                            marginBottom: "10px",
+                          }}
+                        >
+                          <input
+                            type="text"
+                            value={tagInput}
+                            onChange={(event) => setTagInput(event.target.value)}
+                            placeholder="사용자 입력 태그"
+                            style={{
+                              flex: 1,
+                              padding: "8px",
+                              border: "1px solid #cbd5e1",
+                              borderRadius: "6px",
+                            }}
+                          />
+
+                          <button
+                            type="button"
+                            onClick={handleAddUserTag}
+                            style={{
+                              padding: "8px 12px",
+                              border: 0,
+                              borderRadius: "6px",
+                              backgroundColor: "#64748b",
+                              color: "#fff",
+                              cursor: "pointer",
+                            }}
+                          >
+                            태그 추가
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => void handleUpdateFeedback()}
+                          style={{
+                            padding: "8px 12px",
+                            border: 0,
+                            borderRadius: "6px",
+                            backgroundColor: "#059669",
+                            color: "#fff",
+                            cursor: "pointer",
+                          }}
+                        >
+                          후기 저장
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </section>
+              )}
+            </section>
         </div>
     </div>
   );
