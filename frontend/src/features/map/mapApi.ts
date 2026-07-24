@@ -17,20 +17,61 @@ export interface CurrentAttempt {
   feedback_text: string | null;
 }
 
+export interface ApiResponse<T> {
+  success: true;
+  data: T;
+}
+
+class ApiError extends Error {
+  constructor(public readonly status: number) {
+    super(`Trips API request failed with status ${status}`);
+    this.name = "ApiError";
+  }
+}
+
+export interface TripListItem {
+  id: string;
+  user_id: string;
+  title: string;
+  current_attempt: CurrentAttempt;
+}
+
+export interface TripDetail {
+  id: string;
+  user_id: string;
+  title: string;
+  attempts: TripAttempt[];
+}
+
+export interface CreateTripRequest {
+  user_id: string;
+  title: string;
+}
+
+export interface UpdateTripRequest {
+  title: string;
+}
+
+export interface CreateAttemptRequest {
+  status?: TripAttemptStatus;
+}
+
+export interface UpdateAttemptRequest {
+  status?: TripAttemptStatus;
+  feedback_text?: string;
+}
+
+export interface UpdateFeedbackRequest {
+  feedback_text: string;
+}
+
 export interface TripAttempt {
   id: string;
   trip_id: string;
   status: TripAttemptStatus;
+  feedback_text: string | null;
+  created_at: string;
 }
-
-// 가상 UUID 생성 함수
-const generateUUID = (): string => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-};
 
 const getApiBaseUrl = (): string => {
   const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL as

@@ -20,6 +20,8 @@ export function MapComponent() {
   const [center, setCenter] = useState({ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng });
   const [mapInstance, setMapInstance] = useState<any>(null);
   const [placeError, setPlaceError] = useState<string | null>(null);
+  const [trips, setTrips] = useState<TripListItem[]>([]);
+  const [selectedTrip, setSelectedTrip] = useState<TripDetail | null>(null);
 
   // '오늘의 여행' 버튼 클릭 시 데이터 가져오기 (1번 API 파일 호출)
   const handleFetchPlaces = async () => {
@@ -208,36 +210,6 @@ export function MapComponent() {
     });
 
     setTagInput("");
-  };
-
-  const handleCompleteAttempt = async () => {
-    const targetTripId = fetchedTrip?.id || lastCreatedId;
-    if (!targetTripId) {
-      alert('여정이 생성되지 않았습니다. 먼저 여정을 생성해 주세요.');
-      return;
-    }
-
-    console.log(`[UI Action] 여정 attempt 완료(PATCH) 호출 -> ID: ${targetTripId}`);
-    const result = await mapService.completeTripAttempt(targetTripId);
-
-    if (result) {
-      setFetchedTrip(result);
-    }
-  };
-
-  const handleAbortAttempt = async () => {
-    const targetTripId = fetchedTrip?.id || lastCreatedId;
-    if (!targetTripId) {
-      alert('여정이 생성되지 않았습니다. 먼저 여정을 생성해 주세요.');
-      return;
-    }
-
-    console.log(`[UI Action] 여정 attempt 일시중단(PATCH) 호출 -> ID: ${targetTripId}`);
-    const result = await mapService.abortTripAttempt(targetTripId);
-
-    if (result) {
-      setFetchedTrip(result);
-    }
   };
 
   return (
