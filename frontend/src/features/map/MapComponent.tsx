@@ -161,66 +161,58 @@ export function MapComponent() {
     await refreshSelectedTrip(trip.id, attemptId);
   };
 
-  const handleUpdateTripTitle = async () => {
-    if (!selectedTrip) {
-      return;
-    }
+const handleUpdateTrip = async () => {
+  if (!selectedTrip) {
+    return;
+  }
 
-    const result = await mapService.modifyTrip(selectedTrip.id, {
-      title: tripTitle,
-    });
+  const attempt = getCurrentAttempt();
 
-    if (!result) {
-      return;
-    }
+  if (!attempt) {
+    return;
+  }
 
-    setTrips((prev) =>
-      prev.map((trip) => (trip.id === result.id ? result : trip)),
-    );
+  const tripResult = await mapService.modifyTrip(selectedTrip.id, {
+    title: tripTitle,
+  });
 
-    await refreshSelectedTrip(result.id, selectedAttemptId);
-  };
+  if (!tripResult) {
+    return;
+  }
 
-  const handleUpdateAttempt = async () => {
-    const attempt = getCurrentAttempt();
+  const attemptResult = await mapService.modifyAttempt(
+    selectedTrip.id,
+    attempt.id,
+    {
+      status: attemptStatus,
+      feedback_text: feedbackText,
+    },
+  );
 
-    if (!selectedTrip || !attempt) {
-      return;
-    }
+  if (!attemptResult) {
+    return;
+  }
 
-    const result = await mapService.modifyAttempt(
-      selectedTrip.id,
-      attempt.id,
-      {
-        status: attemptStatus,
-        feedback_text: feedbackText,
-      },
-    );
+  const feedbackResult = await mapService.modifyFeedback(
+    selectedTrip.id,
+    attempt.id,
+    {
+      feedback_text: feedbackText,
+    },
+  );
 
-    if (result) {
-      await refreshSelectedTrip(selectedTrip.id, attempt.id);
-    }
-  };
+  if (!feedbackResult) {
+    return;
+  }
 
-  const handleUpdateFeedback = async () => {
-    const attempt = getCurrentAttempt();
+  setTrips((prev) =>
+    prev.map((trip) =>
+      trip.id === tripResult.id ? tripResult : trip,
+    ),
+  );
 
-    if (!selectedTrip || !attempt) {
-      return;
-    }
-
-    const result = await mapService.modifyFeedback(
-      selectedTrip.id,
-      attempt.id,
-      {
-        feedback_text: feedbackText,
-      },
-    );
-
-    if (result) {
-      await refreshSelectedTrip(selectedTrip.id);
-    }
-  };
+  await refreshSelectedTrip(selectedTrip.id, attempt.id);
+};
 
   const handleAddUserTag = () => {
     const normalizedTag = tagInput.trim();
@@ -480,7 +472,7 @@ export function MapComponent() {
 
                     <button
                       type="button"
-                      onClick={() => void handleUpdateTripTitle()}
+                      onClick={() => void handleUpdateTrip()}
                       style={{
                         padding: "10px 14px",
                         border: 0,
@@ -556,21 +548,6 @@ export function MapComponent() {
                         />
                       </label>
 
-                      <button
-                        type="button"
-                        onClick={() => void handleUpdateAttempt()}
-                        style={{
-                          padding: "8px 12px",
-                          border: 0,
-                          borderRadius: "6px",
-                          backgroundColor: "#475569",
-                          color: "#fff",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Attempt 수정
-                      </button>
-
                       <div
                         style={{
                           marginTop: "18px",
@@ -615,27 +592,11 @@ export function MapComponent() {
                             태그 추가
                           </button>
                         </div>
-
-                        <button
-                          type="button"
-                          onClick={() => void handleUpdateFeedback()}
-                          style={{
-                            padding: "8px 12px",
-                            border: 0,
-                            borderRadius: "6px",
-                            backgroundColor: "#059669",
-                            color: "#fff",
-                            cursor: "pointer",
-                          }}
-                        >
-                          후기 저장
-                        </button>
                       </div>
                     </div>
                   )}
                 </section>
               )}
             </section>
-        </div>
   );
 }
