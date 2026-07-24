@@ -22,6 +22,7 @@ export function MapComponent() {
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [trips, setTrips] = useState<TripListItem[]>([]);
   const [selectedTrip, setSelectedTrip] = useState<TripDetail | null>(null);
+  const [selectedAttemptId, setSelectedAttemptId] = useState<string | null>(null);
 
   // '오늘의 여행' 버튼 클릭 시 데이터 가져오기 (1번 API 파일 호출)
   const handleFetchPlaces = async () => {
@@ -96,26 +97,42 @@ export function MapComponent() {
   }, []);
 
   const getCurrentAttempt = () => {
-    if (!selectedTrip || selectedTrip.attempts.length === 0) {
+    if (!selectedTrip || !selectedAttemptId) {
       return null;
     }
 
-    return selectedTrip.attempts[0];
+    return (
+      selectedTrip.attempts.find(
+        (attempt) => attempt.id === selectedAttemptId,
+      ) ?? null
+    );
   };
 
-  const refreshSelectedTrip = async (tripId: string) => {
+  const refreshSelectedTrip = async (
+    tripId: string,
+    attemptId: string | null = selectedAttemptId,
+  ) => {
     const detail = await mapService.getTripDetails(tripId);
 
-    if (detail) {
-      setSelectedTrip(detail);
-      setTripTitle(detail.title);
+    if (!detail) {
+      return;
+    }
 
-      const attempt = detail.attempts[0];
+    setSelectedTrip(detail);
+    setTripTitle(detail.title);
 
-      if (attempt) {
-        setAttemptStatus(attempt.status);
-        setFeedbackText(attempt.feedback_text ?? "");
-      }
+    if (!attemptId) {
+      return;
+    }
+
+    const attempt = detail.attempts.find(
+      (item) => item.id === attemptId,
+    );
+
+    if (attempt) {
+      setSelectedAttemptId(attempt.id);
+      setAttemptStatus(attempt.status);
+      setFeedbackText(attempt.feedback_text ?? "");
     }
   };
 
@@ -126,13 +143,22 @@ export function MapComponent() {
       return;
     }
 
+    const attemptId = result.current_attempt.id;
+
     setTrips((prev) => [result, ...prev]);
-    await refreshSelectedTrip(result.id);
+    setSelectedAttemptId(attemptId);
+    setSelectedTrip(null);
+
+    await refreshSelectedTrip(result.id, attemptId);
   };
 
   const handleSelectTrip = async (trip: TripListItem) => {
+    const attemptId = trip.current_attempt.id;
+
+    setSelectedAttemptId(attemptId);
     setSelectedTrip(null);
-    await refreshSelectedTrip(trip.id);
+
+    await refreshSelectedTrip(trip.id, attemptId);
   };
 
   const handleUpdateTripTitle = async () => {
@@ -144,13 +170,15 @@ export function MapComponent() {
       title: tripTitle,
     });
 
-    if (result) {
-      setTrips((prev) =>
-        prev.map((trip) => (trip.id === result.id ? result : trip)),
-      );
-
-      await refreshSelectedTrip(result.id);
+    if (!result) {
+      return;
     }
+
+    setTrips((prev) =>
+      prev.map((trip) => (trip.id === result.id ? result : trip)),
+    );
+
+    await refreshSelectedTrip(result.id, selectedAttemptId);
   };
 
   const handleUpdateAttempt = async () => {
@@ -170,7 +198,7 @@ export function MapComponent() {
     );
 
     if (result) {
-      await refreshSelectedTrip(selectedTrip.id);
+      await refreshSelectedTrip(selectedTrip.id, attempt.id);
     }
   };
 
