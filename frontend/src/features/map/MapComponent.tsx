@@ -549,7 +549,7 @@ export function MapComponent() {
                           paddingTop: "14px",
                           borderTop: "1px dashed #cbd5e1",
                         }}
-                      >
+                        >
                         <h4 style={{ margin: "0 0 10px" }}>Feedback 수정</h4>
 
                         <div
@@ -609,6 +609,5 @@ export function MapComponent() {
               )}
             </section>
         </div>
-    </div>
   );
 }
