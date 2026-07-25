@@ -6,6 +6,7 @@
 ## 바로가기
 
 - [Debug API](./debug.md)
+- [Directions API](./directions.md)
 - [Health API](./health.md)
 - [Places API](./places.md)
 - [Recommendations API](./recommendations.md)
