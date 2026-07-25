@@ -11,13 +11,22 @@ import {
 } from "./mapApi";
 import { calculateCenterCoordinate, mapService } from "./mapService";
 
-export function MapComponent() {
+interface MapComponentProps {
+  selectedPlaceFromRecommendation?: Place | null;
+}
+
+export function MapComponent({
+  selectedPlaceFromRecommendation,
+}: MapComponentProps) {
   const CURRENT_LOCATION = getCurrentLocation();
 
   // 상태 관리
   const [places, setPlaces] = useState<Place[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
-  const [center, setCenter] = useState({ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng });
+  const [center, setCenter] = useState({
+    lat: CURRENT_LOCATION.lat,
+    lng: CURRENT_LOCATION.lng,
+  });
   const [mapInstance, setMapInstance] = useState<any>(null);
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [trips, setTrips] = useState<TripListItem[]>([]);
@@ -49,10 +58,23 @@ export function MapComponent() {
       CURRENT_LOCATION.lat,
       CURRENT_LOCATION.lng,
       selectedRoutePlace.lat,
-      selectedRoutePlace.lng
+      selectedRoutePlace.lng,
     );
     setCenter(nextCenter);
   };
+
+  // 추천 결과에서 전달된 장소를 지도 선택 상태로 반영
+  useEffect(() => {
+    if (!selectedPlaceFromRecommendation) {
+      return;
+    }
+
+    if (selectedPlace?.id === selectedPlaceFromRecommendation.id) {
+      return;
+    }
+
+    handleSelectPlace(selectedPlaceFromRecommendation);
+  }, [selectedPlace, selectedPlaceFromRecommendation]);
 
   // 지도 리레이아웃 타이밍 제어 효과
   useEffect(() => {
@@ -64,7 +86,7 @@ export function MapComponent() {
       }, 100);
     }
   }, [selectedPlace, mapInstance]);
-  
+
   // 모든 상태 초기화
   const handleReset = () => {
     setPlaces([]);
@@ -102,9 +124,8 @@ export function MapComponent() {
     }
 
     return (
-      selectedTrip.attempts.find(
-        (attempt) => attempt.id === selectedAttemptId,
-      ) ?? null
+      selectedTrip.attempts.find((attempt) => attempt.id === selectedAttemptId) ??
+      null
     );
   };
 
@@ -125,9 +146,7 @@ export function MapComponent() {
       return;
     }
 
-    const attempt = detail.attempts.find(
-      (item) => item.id === attemptId,
-    );
+    const attempt = detail.attempts.find((item) => item.id === attemptId);
 
     if (attempt) {
       setSelectedAttemptId(attempt.id);
@@ -161,58 +180,56 @@ export function MapComponent() {
     await refreshSelectedTrip(trip.id, attemptId);
   };
 
-const handleUpdateTrip = async () => {
-  if (!selectedTrip) {
-    return;
-  }
+  const handleUpdateTrip = async () => {
+    if (!selectedTrip) {
+      return;
+    }
 
-  const attempt = getCurrentAttempt();
+    const attempt = getCurrentAttempt();
 
-  if (!attempt) {
-    return;
-  }
+    if (!attempt) {
+      return;
+    }
 
-  const tripResult = await mapService.modifyTrip(selectedTrip.id, {
-    title: tripTitle,
-  });
+    const tripResult = await mapService.modifyTrip(selectedTrip.id, {
+      title: tripTitle,
+    });
 
-  if (!tripResult) {
-    return;
-  }
+    if (!tripResult) {
+      return;
+    }
 
-  const attemptResult = await mapService.modifyAttempt(
-    selectedTrip.id,
-    attempt.id,
-    {
-      status: attemptStatus,
-      feedback_text: feedbackText,
-    },
-  );
+    const attemptResult = await mapService.modifyAttempt(
+      selectedTrip.id,
+      attempt.id,
+      {
+        status: attemptStatus,
+        feedback_text: feedbackText,
+      },
+    );
 
-  if (!attemptResult) {
-    return;
-  }
+    if (!attemptResult) {
+      return;
+    }
 
-  const feedbackResult = await mapService.modifyFeedback(
-    selectedTrip.id,
-    attempt.id,
-    {
-      feedback_text: feedbackText,
-    },
-  );
+    const feedbackResult = await mapService.modifyFeedback(
+      selectedTrip.id,
+      attempt.id,
+      {
+        feedback_text: feedbackText,
+      },
+    );
 
-  if (!feedbackResult) {
-    return;
-  }
+    if (!feedbackResult) {
+      return;
+    }
 
-  setTrips((prev) =>
-    prev.map((trip) =>
-      trip.id === tripResult.id ? tripResult : trip,
-    ),
-  );
+    setTrips((prev) =>
+      prev.map((trip) => (trip.id === tripResult.id ? tripResult : trip)),
+    );
 
-  await refreshSelectedTrip(selectedTrip.id, attempt.id);
-};
+    await refreshSelectedTrip(selectedTrip.id, attempt.id);
+  };
 
   const handleAddUserTag = () => {
     const normalizedTag = tagInput.trim();
@@ -234,33 +251,46 @@ const handleUpdateTrip = async () => {
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100vh" }}>
-      
       {/* 상단 버튼 컨트롤러 영역 */}
-      <div style={{
-        position: "absolute",
-        top: "20px",
-        left: "50%",
-        transform: "translateX(-50%)",
-        zIndex: 10,
-        backgroundColor: "rgba(255, 255, 255, 0.95)",
-        padding: "12px 20px",
-        borderRadius: "30px",
-        boxShadow: "0 4px 15px rgba(0,0,0,0.15)",
-        display: "flex",
-        gap: "10px",
-        alignItems: "center"
-      }}>
+      <div
+        style={{
+          position: "absolute",
+          top: "20px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 10,
+          backgroundColor: "rgba(255, 255, 255, 0.95)",
+          padding: "12px 20px",
+          borderRadius: "30px",
+          boxShadow: "0 4px 15px rgba(0,0,0,0.15)",
+          display: "flex",
+          gap: "10px",
+          alignItems: "center",
+        }}
+      >
         {places.length === 0 ? (
           <button
             onClick={handleFetchPlaces}
-            style={{ padding: "10px 20px", backgroundColor: "#fee500", color: "#222", border: "none", borderRadius: "20px", cursor: "pointer", fontWeight: "bold", fontSize: "14px" }}
+            style={{
+              padding: "10px 20px",
+              backgroundColor: "#fee500",
+              color: "#222",
+              border: "none",
+              borderRadius: "20px",
+              cursor: "pointer",
+              fontWeight: "bold",
+              fontSize: "14px",
+            }}
           >
             🚀 오늘의 여행 추천받기
           </button>
         ) : (
           <>
-            <span style={{ fontSize: "13px", fontWeight: "bold", color: "#555" }}>목적지 선택:</span>
-            {/* 6) UI에 장소 목록 카드 형태로 표시 */}
+            <span style={{ fontSize: "13px", fontWeight: "bold", color: "#555" }}>
+              목적지 선택:
+            </span>
+
+            {/* 추천 장소 목록 카드 형태로 표시 */}
             {places.length > 0 && (
               <div
                 style={{
@@ -277,13 +307,28 @@ const handleUpdateTrip = async () => {
                   boxShadow: "0 6px 20px rgba(0,0,0,0.18)",
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "10px",
+                  }}
+                >
                   <strong style={{ fontSize: "14px" }}>추천 장소</strong>
-                  <span style={{ fontSize: "12px", color: "#64748b" }}>{places.length}개</span>
+                  <span style={{ fontSize: "12px", color: "#64748b" }}>
+                    {places.length}개
+                  </span>
                 </div>
 
                 {placeError && (
-                  <div style={{ color: "#dc2626", fontSize: "12px", marginBottom: "8px" }}>
+                  <div
+                    style={{
+                      color: "#dc2626",
+                      fontSize: "12px",
+                      marginBottom: "8px",
+                    }}
+                  >
                     {placeError}
                   </div>
                 )}
@@ -299,20 +344,50 @@ const handleUpdateTrip = async () => {
                       padding: "8px 10px",
                       marginBottom: "8px",
                       borderRadius: "10px",
-                      border: selectedPlace?.id === place.id ? "1px solid #ff5656" : "1px solid #e2e8f0",
-                      backgroundColor: selectedPlace?.id === place.id ? "#fff5f5" : "#fff",
+                      border:
+                        selectedPlace?.id === place.id
+                          ? "1px solid #ff5656"
+                          : "1px solid #e2e8f0",
+                      backgroundColor:
+                        selectedPlace?.id === place.id ? "#fff5f5" : "#fff",
                       cursor: "pointer",
                     }}
                   >
-                    <div style={{ fontWeight: "bold", fontSize: "13px", color: "#111827" }}>{place.name}</div>
-                    <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
+                    <div
+                      style={{
+                        fontWeight: "bold",
+                        fontSize: "13px",
+                        color: "#111827",
+                      }}
+                    >
+                      {place.name}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: "#64748b",
+                        marginTop: "2px",
+                      }}
+                    >
                       {place.address || "주소 정보 없음"}
                     </div>
                   </button>
                 ))}
               </div>
             )}
-            <button onClick={handleReset} style={{ padding: "8px 12px", backgroundColor: "#eee", border: "none", borderRadius: "20px", cursor: "pointer", fontSize: "12px", color: "#333" }}>
+
+            <button
+              onClick={handleReset}
+              style={{
+                padding: "8px 12px",
+                backgroundColor: "#eee",
+                border: "none",
+                borderRadius: "20px",
+                cursor: "pointer",
+                fontSize: "12px",
+                color: "#333",
+              }}
+            >
               닫기
             </button>
           </>
@@ -327,8 +402,19 @@ const handleUpdateTrip = async () => {
         onCreate={setMapInstance}
       >
         {/* 출발지 마커 */}
-        <MapMarker position={{ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng }}>
-          <div style={{ padding: "5px", color: "#000", fontWeight: "bold", fontSize: "12px" }}>출발: 인천지방법원부천지원</div>
+        <MapMarker
+          position={{ lat: CURRENT_LOCATION.lat, lng: CURRENT_LOCATION.lng }}
+        >
+          <div
+            style={{
+              padding: "5px",
+              color: "#000",
+              fontWeight: "bold",
+              fontSize: "12px",
+            }}
+          >
+            출발: 인천지방법원부천지원
+          </div>
         </MapMarker>
 
         {/* 가이드 라인 그리기 */}
@@ -344,8 +430,17 @@ const handleUpdateTrip = async () => {
               strokeOpacity={0.85}
               strokeStyle={"solid"}
             />
-            <MapMarker position={{ lat: selectedPlace.lat, lng: selectedPlace.lng }}>
-              <div style={{ padding: "5px", color: "#000", fontWeight: "bold", fontSize: "12px" }}>
+            <MapMarker
+              position={{ lat: selectedPlace.lat, lng: selectedPlace.lng }}
+            >
+              <div
+                style={{
+                  padding: "5px",
+                  color: "#000",
+                  fontWeight: "bold",
+                  fontSize: "12px",
+                }}
+              >
                 {selectedPlace.name}
               </div>
             </MapMarker>
@@ -353,118 +448,223 @@ const handleUpdateTrip = async () => {
         )}
       </Map>
 
-            <section
-                style={{
-                  marginTop: "24px",
-                  padding: "16px",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "12px",
-                  backgroundColor: "#ffffff",
-                }}
-              >
-              <h2 style={{ margin: "0 0 12px" }}>Trips</h2>
+      <section
+        style={{
+          marginTop: "24px",
+          padding: "16px",
+          border: "1px solid #e2e8f0",
+          borderRadius: "12px",
+          backgroundColor: "#ffffff",
+        }}
+      >
+        <h2 style={{ margin: "0 0 12px" }}>Trips</h2>
 
+        <div
+          style={{
+            display: "flex",
+            gap: "8px",
+            marginBottom: "16px",
+          }}
+        >
+          <input
+            type="text"
+            value={tripFormData.title}
+            onChange={(event) =>
+              setTripFormData((prev) => ({
+                ...prev,
+                title: event.target.value,
+              }))
+            }
+            placeholder="여행 제목"
+            style={{
+              flex: 1,
+              padding: "10px",
+              border: "1px solid #cbd5e1",
+              borderRadius: "6px",
+            }}
+          />
+
+          <button
+            type="button"
+            onClick={handleCreateTrip}
+            style={{
+              padding: "10px 14px",
+              border: 0,
+              borderRadius: "6px",
+              backgroundColor: "#2563eb",
+              color: "#fff",
+              cursor: "pointer",
+            }}
+          >
+            Trip 생성
+          </button>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+            gap: "10px",
+          }}
+        >
+          {trips.map((trip) => (
+            <button
+              key={trip.id}
+              type="button"
+              onClick={() => void handleSelectTrip(trip)}
+              style={{
+                padding: "14px",
+                textAlign: "left",
+                border: "1px solid #cbd5e1",
+                borderRadius: "10px",
+                backgroundColor:
+                  selectedTrip?.id === trip.id ? "#eff6ff" : "#fff",
+                cursor: "pointer",
+              }}
+            >
+              <strong>{trip.title}</strong>
               <div
                 style={{
-                  display: "flex",
-                  gap: "8px",
-                  marginBottom: "16px",
+                  marginTop: "8px",
+                  fontSize: "13px",
+                  color: "#64748b",
                 }}
               >
-                <input
-                  type="text"
-                  value={tripFormData.title}
-                  onChange={(event) =>
-                    setTripFormData((prev) => ({
-                      ...prev,
-                      title: event.target.value,
-                    }))
-                  }
-                  placeholder="여행 제목"
-                  style={{
-                    flex: 1,
-                    padding: "10px",
-                    border: "1px solid #cbd5e1",
-                    borderRadius: "6px",
-                  }}
-                />
+                상태: {trip.current_attempt.status}
+              </div>
+            </button>
+          ))}
+        </div>
 
-                <button
-                  type="button"
-                  onClick={handleCreateTrip}
+        {selectedTrip && (
+          <section
+            style={{
+              marginTop: "20px",
+              paddingTop: "16px",
+              borderTop: "1px solid #e2e8f0",
+            }}
+          >
+            <h3 style={{ margin: "0 0 12px" }}>선택된 Trip</h3>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "8px",
+                marginBottom: "16px",
+              }}
+            >
+              <input
+                type="text"
+                value={tripTitle}
+                onChange={(event) => setTripTitle(event.target.value)}
+                style={{
+                  flex: 1,
+                  padding: "10px",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "6px",
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={() => void handleUpdateTrip()}
+                style={{
+                  padding: "10px 14px",
+                  border: 0,
+                  borderRadius: "6px",
+                  backgroundColor: "#475569",
+                  color: "#fff",
+                  cursor: "pointer",
+                }}
+              >
+                제목 수정
+              </button>
+            </div>
+
+            {getCurrentAttempt() && (
+              <div
+                style={{
+                  padding: "14px",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "8px",
+                }}
+              >
+                <h4 style={{ margin: "0 0 12px" }}>Attempt 수정</h4>
+
+                <label
                   style={{
-                    padding: "10px 14px",
-                    border: 0,
-                    borderRadius: "6px",
-                    backgroundColor: "#2563eb",
-                    color: "#fff",
-                    cursor: "pointer",
+                    display: "block",
+                    marginBottom: "10px",
                   }}
                 >
-                  Trip 생성
-                </button>
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-                  gap: "10px",
-                }}
-              >
-                {trips.map((trip) => (
-                  <button
-                    key={trip.id}
-                    type="button"
-                    onClick={() => void handleSelectTrip(trip)}
+                  상태
+                  <select
+                    value={attemptStatus}
+                    onChange={(event) =>
+                      setAttemptStatus(event.target.value as TripAttemptStatus)
+                    }
                     style={{
-                      padding: "14px",
-                      textAlign: "left",
+                      display: "block",
+                      marginTop: "6px",
+                      padding: "8px",
                       border: "1px solid #cbd5e1",
-                      borderRadius: "10px",
-                      backgroundColor:
-                        selectedTrip?.id === trip.id ? "#eff6ff" : "#fff",
-                      cursor: "pointer",
+                      borderRadius: "6px",
                     }}
                   >
-                    <strong>{trip.title}</strong>
-                    <div
-                      style={{
-                        marginTop: "8px",
-                        fontSize: "13px",
-                        color: "#64748b",
-                      }}
-                    >
-                      상태: {trip.current_attempt.status}
-                    </div>
-                  </button>
-                ))}
-              </div>
+                    <option value="started">started</option>
+                    <option value="completed">completed</option>
+                    <option value="aborted">aborted</option>
+                  </select>
+                </label>
 
-              {selectedTrip && (
-                <section
+                <label
                   style={{
-                    marginTop: "20px",
-                    paddingTop: "16px",
-                    borderTop: "1px solid #e2e8f0",
+                    display: "block",
+                    marginBottom: "10px",
                   }}
                 >
-                  <h3 style={{ margin: "0 0 12px" }}>선택된 Trip</h3>
+                  후기
+                  <textarea
+                    value={feedbackText}
+                    onChange={(event) => setFeedbackText(event.target.value)}
+                    rows={4}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      marginTop: "6px",
+                      padding: "8px",
+                      boxSizing: "border-box",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "6px",
+                      resize: "vertical",
+                    }}
+                  />
+                </label>
+
+                <div
+                  style={{
+                    marginTop: "18px",
+                    paddingTop: "14px",
+                    borderTop: "1px dashed #cbd5e1",
+                  }}
+                >
+                  <h4 style={{ margin: "0 0 10px" }}>Feedback 수정</h4>
 
                   <div
                     style={{
                       display: "flex",
                       gap: "8px",
-                      marginBottom: "16px",
+                      marginBottom: "10px",
                     }}
                   >
                     <input
                       type="text"
-                      value={tripTitle}
-                      onChange={(event) => setTripTitle(event.target.value)}
+                      value={tagInput}
+                      onChange={(event) => setTagInput(event.target.value)}
+                      placeholder="사용자 입력 태그"
                       style={{
                         flex: 1,
-                        padding: "10px",
+                        padding: "8px",
                         border: "1px solid #cbd5e1",
                         borderRadius: "6px",
                       }}
@@ -472,132 +672,25 @@ const handleUpdateTrip = async () => {
 
                     <button
                       type="button"
-                      onClick={() => void handleUpdateTrip()}
+                      onClick={handleAddUserTag}
                       style={{
-                        padding: "10px 14px",
+                        padding: "8px 12px",
                         border: 0,
                         borderRadius: "6px",
-                        backgroundColor: "#475569",
+                        backgroundColor: "#64748b",
                         color: "#fff",
                         cursor: "pointer",
                       }}
                     >
-                      제목 수정
+                      태그 추가
                     </button>
                   </div>
-
-                  {getCurrentAttempt() && (
-                    <div
-                      style={{
-                        padding: "14px",
-                        border: "1px solid #e2e8f0",
-                        borderRadius: "8px",
-                      }}
-                    >
-                      <h4 style={{ margin: "0 0 12px" }}>Attempt 수정</h4>
-
-                      <label
-                        style={{
-                          display: "block",
-                          marginBottom: "10px",
-                        }}
-                      >
-                        상태
-                        <select
-                          value={attemptStatus}
-                          onChange={(event) =>
-                            setAttemptStatus(
-                              event.target.value as TripAttemptStatus,
-                            )
-                          }
-                          style={{
-                            display: "block",
-                            marginTop: "6px",
-                            padding: "8px",
-                            border: "1px solid #cbd5e1",
-                            borderRadius: "6px",
-                          }}
-                        >
-                          <option value="started">started</option>
-                          <option value="completed">completed</option>
-                          <option value="aborted">aborted</option>
-                        </select>
-                      </label>
-
-                      <label
-                        style={{
-                          display: "block",
-                          marginBottom: "10px",
-                        }}
-                      >
-                        후기
-                        <textarea
-                          value={feedbackText}
-                          onChange={(event) => setFeedbackText(event.target.value)}
-                          rows={4}
-                          style={{
-                            display: "block",
-                            width: "100%",
-                            marginTop: "6px",
-                            padding: "8px",
-                            boxSizing: "border-box",
-                            border: "1px solid #cbd5e1",
-                            borderRadius: "6px",
-                            resize: "vertical",
-                          }}
-                        />
-                      </label>
-
-                      <div
-                        style={{
-                          marginTop: "18px",
-                          paddingTop: "14px",
-                          borderTop: "1px dashed #cbd5e1",
-                        }}
-                        >
-                        <h4 style={{ margin: "0 0 10px" }}>Feedback 수정</h4>
-
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: "8px",
-                            marginBottom: "10px",
-                          }}
-                        >
-                          <input
-                            type="text"
-                            value={tagInput}
-                            onChange={(event) => setTagInput(event.target.value)}
-                            placeholder="사용자 입력 태그"
-                            style={{
-                              flex: 1,
-                              padding: "8px",
-                              border: "1px solid #cbd5e1",
-                              borderRadius: "6px",
-                            }}
-                          />
-
-                          <button
-                            type="button"
-                            onClick={handleAddUserTag}
-                            style={{
-                              padding: "8px 12px",
-                              border: 0,
-                              borderRadius: "6px",
-                              backgroundColor: "#64748b",
-                              color: "#fff",
-                              cursor: "pointer",
-                            }}
-                          >
-                            태그 추가
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </section>
-              )}
-            </section>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+      </section>
     </div>
   );
 }

@@ -8,6 +8,8 @@ export function RecommendationComponent() {
   const [saved, setSaved] = useState(false);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [places, setPlaces] = useState<Place[]>([]);
+  const [selectedRecommendedPlace, setSelectedRecommendedPlace] =
+    useState<Place | null>(null);
 
   useEffect(() => {
     const loadPreferences = async () => {
@@ -46,6 +48,10 @@ export function RecommendationComponent() {
     }
   };
 
+  const handleSelectRecommendationPlace = (place: Place) => {
+    setSelectedRecommendedPlace(place);
+  };
+
   if (!preferencesLoaded) {
     return null;
   }
@@ -54,7 +60,6 @@ export function RecommendationComponent() {
     <div>
       <section>
         <h2>여행 성향 입력</h2>
-
         <PreferenceForm onSave={handleSavePreferences} />
       </section>
 
@@ -71,15 +76,22 @@ export function RecommendationComponent() {
         <p>지역: 부천</p>
 
         {places.map((place) => (
-          <div key={place.id}>
+          <button
+            key={place.id}
+            type="button"
+            onClick={() => handleSelectRecommendationPlace(place)}
+            style={{ display: "block", marginBottom: "8px" }}
+          >
             <p>{place.name}</p>
             <p>{place.address}</p>
-          </div>
+          </button>
         ))}
       </section>
 
       <section>
-        <MapComponent />
+        <MapComponent
+          selectedPlaceFromRecommendation={selectedRecommendedPlace}
+        />
       </section>
     </div>
   );
