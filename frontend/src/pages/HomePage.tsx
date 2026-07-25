@@ -1,5 +1,5 @@
 import { HealthCheckPanel } from "../features/health/HealthCheckPanel";
-import { MapComponent } from "../features/map/MapComponent";
+import { RecommendationComponent } from "../features/recommendation/recommendationComponent";
 
 export function HomePage() {
   return (
@@ -8,7 +8,7 @@ export function HomePage() {
         <h1 className="page__title">Journey101 Baseline</h1>
         <p className="page__subtitle">Hello World</p>
         <HealthCheckPanel />
-        <MapComponent />
+        <RecommendationComponent />
       </div>
     </main>
   );
