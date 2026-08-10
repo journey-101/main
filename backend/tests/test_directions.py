@@ -18,7 +18,7 @@ REQUEST_BODY = {
         "latitude": 37.5034,
         "longitude": 126.7660,
     },
-    "mode": "walking",
+    "mode": "transit",
 }
 
 
@@ -69,7 +69,7 @@ def test_search_directions_returns_mock_route(client: TestClient) -> None:
     assert response.status_code == 200
     route = response.json()["data"]["routes"][0]
     assert route["provider"] == "mock"
-    assert route["mode"] == "walking"
+    assert route["mode"] == "transit"
     assert route["destination"] == {
         "latitude": 37.5088,
         "longitude": 126.742,
@@ -79,10 +79,11 @@ def test_search_directions_returns_mock_route(client: TestClient) -> None:
     assert route["summary"]["distance_meters"] > 0
     assert route["summary"]["duration_seconds"] > 0
     assert route["geometry"]["type"] == "LineString"
-    assert route["geometry"]["coordinates"] == [
-        [126.766, 37.5034],
-        [126.742, 37.5088],
-    ]
+    coordinates = route["geometry"]["coordinates"]
+    assert coordinates[0] == [126.766, 37.5034]
+    assert coordinates[-1] == [126.742, 37.5088]
+    assert len(coordinates) == 5
+    assert len({tuple(coordinate) for coordinate in coordinates}) == 5
 
 
 def test_search_directions_returns_not_found_for_unknown_place(

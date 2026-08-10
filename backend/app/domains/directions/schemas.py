@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -27,7 +28,7 @@ class DirectionSearchRequest(BaseModel):
                     "latitude": 37.5034,
                     "longitude": 126.766,
                 },
-                "mode": "walking",
+                "mode": "transit",
             }
         },
     )
@@ -43,13 +44,13 @@ class DirectionPlaceData(Coordinate):
 
 
 class GeoJsonLineString(BaseModel):
-    type: str = "LineString"
-    coordinates: list[tuple[float, float]]
+    type: Literal["LineString"] = "LineString"
+    coordinates: list[tuple[float, float]] = Field(min_length=2)
 
 
 class DirectionSummaryData(BaseModel):
-    distance_meters: int
-    duration_seconds: int
+    distance_meters: int = Field(ge=0)
+    duration_seconds: int = Field(ge=0)
 
 
 class DirectionRouteData(BaseModel):
@@ -62,4 +63,4 @@ class DirectionRouteData(BaseModel):
 
 
 class DirectionSearchData(BaseModel):
-    routes: list[DirectionRouteData]
+    routes: list[DirectionRouteData] = Field(min_length=1)
