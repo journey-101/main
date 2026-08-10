@@ -1,0 +1,15 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {"code": "TEST-VALID", "name": "Would be valid"},
+      "geometry": {"type": "Polygon", "coordinates": [[[127, 37], [128, 37], [128, 38], [127, 38], [127, 37]]]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"code": "TEST-INVALID", "name": "Invalid"},
+      "geometry": {"type": "Polygon", "coordinates": [[[127, 37], [128, 38], [128, 37], [127, 38], [127, 37]]]}
+    }
+  ]
+}

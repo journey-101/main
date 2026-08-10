@@ -1,15 +1,9 @@
 from app.domains.health.service import check_database_health
 
 
-class FakeResult:
-    def scalar_one(self) -> int:
-        return 1
-
-
 class FakeSession:
-    def execute(self, statement: object) -> FakeResult:
-        self.statement = statement
-        return FakeResult()
+    def ping(self) -> int:
+        return 1
 
 
 def test_database_health_maps_select_result() -> None:
