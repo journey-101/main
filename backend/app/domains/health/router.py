@@ -1,8 +1,9 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 
 from app.core.errors import DatabaseConnectionError
-from app.db.session import get_db_session
+from app.db.uow import UnitOfWork, get_uow
 from app.domains.health.schemas import DbHealthData, HealthData, SuccessResponse
 from app.domains.health.service import check_database_health, check_service_health
 
@@ -16,9 +17,9 @@ def get_health() -> SuccessResponse[HealthData]:
 
 @router.get("/db", response_model=SuccessResponse[DbHealthData])
 def get_database_health(
-    session: Session = Depends(get_db_session),
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
 ) -> SuccessResponse[DbHealthData]:
     try:
-        return SuccessResponse(data=check_database_health(session))
+        return SuccessResponse(data=check_database_health(uow.health))
     except Exception as exc:
         raise DatabaseConnectionError() from exc

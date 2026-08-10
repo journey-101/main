@@ -10,7 +10,6 @@ class RecommendationMethod(str, Enum):
 
 
 class UserPreferenceData(BaseModel):
-    user_id: UUID
     preferred_categories: list[str]
     avoided_categories: list[str]
     prefers_quiet: bool
@@ -43,7 +42,6 @@ RecommendationTarget = Annotated[
 class CreateRecommendationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    user_id: UUID
     method: RecommendationMethod = RecommendationMethod.preference_mock
     target: RecommendationTarget
     limit: int = Field(default=10, ge=1, le=100)
@@ -52,7 +50,6 @@ class CreateRecommendationRequest(BaseModel):
 class CreatePlaceRecommendationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    user_id: UUID
     region_code: str | None = None
     limit: int = Field(default=10, ge=1, le=100)
 
@@ -60,7 +57,6 @@ class CreatePlaceRecommendationRequest(BaseModel):
 class CreateTripRecommendationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    user_id: UUID
     trip_id: UUID
     limit: int = Field(default=10, ge=1, le=100)
 
