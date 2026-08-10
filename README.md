@@ -22,8 +22,8 @@ Docker Compose로 함께 실행하는 모노레포 구조를 사용합니다.
 
 ```txt
 frontend/   React, Vite, TypeScript
-backend/    FastAPI, SQLAlchemy, PostgreSQL client, uv
-postgres    Docker Compose PostgreSQL service
+backend/    FastAPI, Firebase Admin, repository/UoW, Alembic, uv
+postgres    Docker Compose PostgreSQL 16 + PostGIS 3.5
 ```
 
 ## 실행 방법
@@ -49,8 +49,10 @@ http://localhost:5173
 주요 값:
 
 - `DATABASE_URL`: backend가 우선 사용하는 DB 연결 문자열
+- `DATABASE_POOL_SIZE`, `DATABASE_MAX_OVERFLOW`, `DATABASE_POOL_TIMEOUT`: DB pool 설정
+- `GOOGLE_CLOUD_PROJECT`: Firebase 프로젝트 ID
+- `FIREBASE_AUTH_EMULATOR_HOST`: 로컬 Auth Emulator 주소(클라우드에서는 설정하지 않음)
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`: PostgreSQL 초기값
-- `POSTGRES_HOST`, `POSTGRES_PORT`: backend 컨테이너 내부 DB 접속 정보
 - `POSTGRES_HOST_PORT`: 로컬 머신에 노출할 PostgreSQL 포트
 - `CORS_ALLOWED_ORIGINS`: backend가 허용할 프론트엔드 origin 목록
 - `CORS_ALLOW_CREDENTIALS`: 인증 쿠키/세션이 필요할 때만 `true`
@@ -59,6 +61,11 @@ http://localhost:5173
 
 - `GET /api/v1/health`
 - `GET /api/v1/health/db`
+- `GET /api/v1/auth/me` (`Authorization: Bearer <Firebase ID token>` 필수)
+
+여행·선호도·추천 API도 Bearer 토큰이 필수이며 장소·health API는 공개입니다.
+기존 DB 전환과 운영 절차는 [cutover runbook](docs/cloud-sql-firebase-cutover.md)을
+참조합니다.
 
 응답은 기능 API에서 공통으로 사용할 수 있도록 아래 형태를 따릅니다.
 

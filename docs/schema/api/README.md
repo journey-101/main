@@ -1,11 +1,10 @@
 # API 계약 문서
 
-변경일: 2026-06-27  
-변경 브랜치: `feat/14-trip`
+변경일: 2026-08-10
 
 ## 바로가기
 
-- [Debug API](./debug.md)
+- [Authentication API](./auth.md)
 - [Health API](./health.md)
 - [Places API](./places.md)
 - [Recommendations API](./recommendations.md)
