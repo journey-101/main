@@ -1,8 +1,6 @@
 # Places API 계약
 
-변경일: 2026-07-12
-
-변경 브랜치: `feat/21-placeDB-migration`
+검증일: 2026-08-12
 
 기본 경로는 `/api/v1/places`다. 장소 데이터는 PostgreSQL `places`
 테이블에서 조회한다.
@@ -94,6 +92,5 @@ GET /api/v1/places/{place_id}
 ## 검증 및 데이터 오류
 
 - UUID 또는 query 형식이 잘못되면 `422`를 반환한다.
-- DB에서 장소를 조회할 수 없거나 조회한 데이터를 API 응답 모델로
-  변환할 수 없으면
-  `500 {"detail": "Unknown place data error"}`를 반환한다.
+- DB 조회 등 처리되지 않은 서버 오류는 `500`을 반환한다. FE는 서버 오류의
+  response body 형태에 의존하지 않는다.

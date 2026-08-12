@@ -59,11 +59,14 @@ http://localhost:5173
 
 ## API
 
-- `GET /api/v1/health`
-- `GET /api/v1/health/db`
-- `GET /api/v1/auth/me` (`Authorization: Bearer <Firebase ID token>` 필수)
+- 공개 API: health, places, directions
+- 인증 API: auth/me, trips, preferences, recommendations
 
-여행·선호도·추천 API도 Bearer 토큰이 필수이며 장소·health API는 공개입니다.
+인증 API에는 `Authorization: Bearer <Firebase ID token>`이 필요합니다. 사용자
+식별자는 토큰에서 결정되므로 FE가 `user_id`를 query나 body로 보내지 않습니다.
+API별 요청·응답과 FE 전환 사항은
+[FE API 연동 가이드](docs/schema/api/frontend-integration.md)를 먼저 확인하세요.
+
 기존 DB 전환과 운영 절차는 [cutover runbook](docs/cloud-sql-firebase-cutover.md)을
 참조합니다.
 
