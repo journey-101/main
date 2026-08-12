@@ -12,9 +12,12 @@ class ApiError(RuntimeError):
 
 
 class ApiClient:
-    def __init__(self, base_url: str, timeout: float = 10.0) -> None:
+    def __init__(
+        self, base_url: str, timeout: float = 10.0, bearer_token: str | None = None
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self.bearer_token = bearer_token
 
     def get(
         self,
@@ -59,6 +62,8 @@ class ApiClient:
         url = self._url(path, query)
         body = None
         headers = {"Accept": "application/json"}
+        if self.bearer_token:
+            headers["Authorization"] = f"Bearer {self.bearer_token}"
         if payload is not None:
             body = json.dumps(payload).encode("utf-8")
             headers["Content-Type"] = "application/json"

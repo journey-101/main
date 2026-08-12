@@ -22,9 +22,16 @@ def main() -> int:
     parser.add_argument("--base-url", default=DEFAULT_BASE_URL)
     parser.add_argument("--data-dir", type=Path, default=SCRIPT_DIR / "data")
     parser.add_argument("--timeout", type=float, default=10.0)
+    parser.add_argument(
+        "--token",
+        default=os.environ.get("FIREBASE_ID_TOKEN"),
+        help="Firebase ID token (or set FIREBASE_ID_TOKEN)",
+    )
     args = parser.parse_args()
+    if not args.token:
+        parser.error("--token or FIREBASE_ID_TOKEN is required")
 
-    client = ApiClient(args.base_url, timeout=args.timeout)
+    client = ApiClient(args.base_url, timeout=args.timeout, bearer_token=args.token)
     run_id = f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{uuid4().hex[:8]}"
 
     try:
@@ -38,11 +45,9 @@ def main() -> int:
 
 
 def run_flow(client: ApiClient, data_dir: Path, run_id: str) -> None:
-    print("[step] load test user")
-    test_user = expect_success(client.get("/api/v1/debug/test-user"))
-    user_id = test_user["user_id"]
-
-    context = {"user_id": user_id, "run_id": run_id}
+    print("[step] verify Firebase user")
+    expect_success(client.get("/api/v1/auth/me"))
+    context = {"run_id": run_id}
 
     print("[step] create trip")
     create_trip_payload = load_payload(data_dir, "create_trip.json", context)
@@ -50,7 +55,6 @@ def run_flow(client: ApiClient, data_dir: Path, run_id: str) -> None:
         client.post("/api/v1/trips", payload=create_trip_payload, expected_status=201)
     )
     trip_id = created_trip["id"]
-    assert_equal(created_trip["user_id"], user_id, "created trip user_id")
     assert_equal(
         created_trip["title"], create_trip_payload["title"], "created trip title"
     )
@@ -59,9 +63,7 @@ def run_flow(client: ApiClient, data_dir: Path, run_id: str) -> None:
     )
 
     print("[step] confirm trip in list")
-    listed_trips = expect_success(
-        client.get("/api/v1/trips", query={"user_id": user_id})
-    )
+    listed_trips = expect_success(client.get("/api/v1/trips"))
     matching_trip = find_by_id(listed_trips, trip_id)
     assert_equal(
         matching_trip["title"], create_trip_payload["title"], "listed trip title"

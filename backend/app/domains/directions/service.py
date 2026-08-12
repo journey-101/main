@@ -1,23 +1,22 @@
 from fastapi import HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
 
 from app.domains.directions.schemas import (
     DirectionPlaceData,
     DirectionSearchData,
     DirectionSearchRequest,
 )
-from app.domains.places import repository as places_repository
+from app.domains.places.repository import PlaceRepository
 from app.integrations.directions.base import DirectionsProvider
 
 
 def search_directions(
-    session: Session,
+    places: PlaceRepository,
     request: DirectionSearchRequest,
     provider: DirectionsProvider,
 ) -> DirectionSearchData:
     try:
-        place = places_repository.get_place(session, request.place_id)
+        place = places.get(request.place_id)
     except SQLAlchemyError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -36,9 +35,9 @@ def search_directions(
     )
     destination = DirectionPlaceData(
         place_id=request.place_id,
-        name=place["name"],
-        latitude=place["lat"],
-        longitude=place["lng"],
+        name=place.name,
+        latitude=place.lat,
+        longitude=place.lng,
     )
     return DirectionSearchData(
         routes=provider.search(origin, destination, request.mode)

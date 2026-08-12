@@ -1,10 +1,11 @@
-from uuid import UUID
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 
-from app.db.session import get_db_session
+from app.core.auth import CurrentUser, get_current_user
+from app.db.uow import UnitOfWork, get_uow
 from app.domains.health.schemas import SuccessResponse
+from app.domains.recommendations import service
 from app.domains.recommendations.schemas import (
     CreatePlaceRecommendationRequest,
     CreateRecommendationRequest,
@@ -16,61 +17,60 @@ from app.domains.recommendations.schemas import (
     UpdateUserPreferenceRequest,
     UserPreferenceData,
 )
-from app.domains.recommendations.service import (
-    create_recommendation,
-    get_user_preference,
-    save_user_preference,
-)
 
 router = APIRouter()
+User = Annotated[CurrentUser, Depends(get_current_user)]
+Uow = Annotated[UnitOfWork, Depends(get_uow)]
 
 
 @router.get("/me/preferences", response_model=SuccessResponse[UserPreferenceData])
-def get_preferences(
-    user_id: UUID, session: Session = Depends(get_db_session)
-) -> SuccessResponse[UserPreferenceData]:
-    return SuccessResponse(data=get_user_preference(session, user_id))
+def get_preferences(user: User, uow: Uow) -> SuccessResponse[UserPreferenceData]:
+    return SuccessResponse(data=service.get_user_preference(uow.preferences, user.uid))
 
 
 @router.put("/me/preferences", response_model=SuccessResponse[UserPreferenceData])
 def put_preferences(
-    request: UpdateUserPreferenceRequest,
-    session: Session = Depends(get_db_session),
+    request: UpdateUserPreferenceRequest, user: User, uow: Uow
 ) -> SuccessResponse[UserPreferenceData]:
-    return SuccessResponse(data=save_user_preference(session, request))
+    return SuccessResponse(
+        data=service.save_user_preference(uow.preferences, user.uid, request)
+    )
 
 
 @router.post("/recommendations", response_model=SuccessResponse[RecommendationData])
 def post_recommendation(
-    request: CreateRecommendationRequest,
-    session: Session = Depends(get_db_session),
+    request: CreateRecommendationRequest, user: User, uow: Uow
 ) -> SuccessResponse[RecommendationData]:
-    return SuccessResponse(data=create_recommendation(session, request))
+    return SuccessResponse(
+        data=service.create_recommendation(
+            uow.trips, uow.preferences, uow.places, user.uid, request
+        )
+    )
 
 
-@router.post("/recommendations/places", response_model=SuccessResponse[RecommendationData])
+@router.post(
+    "/recommendations/places", response_model=SuccessResponse[RecommendationData]
+)
 def post_place_recommendation(
-    request: CreatePlaceRecommendationRequest,
-    session: Session = Depends(get_db_session),
+    request: CreatePlaceRecommendationRequest, user: User, uow: Uow
 ) -> SuccessResponse[RecommendationData]:
     normalized = CreateRecommendationRequest(
-        user_id=request.user_id,
         method=RecommendationMethod.preference_mock,
         target=PlaceRecommendationTarget(type="place", region_code=request.region_code),
         limit=request.limit,
     )
-    return SuccessResponse(data=create_recommendation(session, normalized))
+    return post_recommendation(normalized, user, uow)
 
 
-@router.post("/recommendations/trips", response_model=SuccessResponse[RecommendationData])
+@router.post(
+    "/recommendations/trips", response_model=SuccessResponse[RecommendationData]
+)
 def post_trip_recommendation(
-    request: CreateTripRecommendationRequest,
-    session: Session = Depends(get_db_session),
+    request: CreateTripRecommendationRequest, user: User, uow: Uow
 ) -> SuccessResponse[RecommendationData]:
     normalized = CreateRecommendationRequest(
-        user_id=request.user_id,
         method=RecommendationMethod.preference_mock,
         target=TripRecommendationTarget(type="trip", trip_id=request.trip_id),
         limit=request.limit,
     )
-    return SuccessResponse(data=create_recommendation(session, normalized))
+    return post_recommendation(normalized, user, uow)

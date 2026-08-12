@@ -1,9 +1,8 @@
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
 
-from app.domains.trips import repository
+from app.domains.trips.repository import AttemptRecord, TripListRecord, TripRepository
 from app.domains.trips.schemas import (
     CurrentTripAttemptData,
     TripAttemptData,
@@ -14,174 +13,103 @@ from app.domains.trips.schemas import (
 )
 
 
-def list_user_trips(session: Session, user_id: UUID) -> list[TripListItemData]:
-    return [
-        _map_trip_list_item(row)
-        for row in repository.list_trips_by_user(session, user_id)
-    ]
+def list_user_trips(repo: TripRepository, uid: str) -> list[TripListItemData]:
+    return [_map_list_item(row) for row in repo.list_for_user(uid)]
 
 
-def create_trip(session: Session, user_id: UUID, title: str) -> TripListItemData:
-    if repository.get_user(session, user_id) is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-        )
-
-    trip, attempt = repository.create_trip_with_attempt(session, user_id, title)
+def create_trip(repo: TripRepository, uid: str, title: str) -> TripListItemData:
+    trip, attempt = repo.create_with_attempt(uid, title)
     return TripListItemData(
-        id=trip["id"],
-        user_id=trip["user_id"],
-        title=trip["title"],
-        current_attempt=_map_current_attempt(attempt),
+        id=trip.id, title=trip.title, current_attempt=_map_current(attempt)
     )
 
 
-def get_trip_detail(session: Session, trip_id: UUID) -> TripDetailData:
-    trip = repository.get_trip(session, trip_id)
+def get_trip_detail(repo: TripRepository, uid: str, trip_id: UUID) -> TripDetailData:
+    trip = repo.get(trip_id, uid)
     if trip is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
-        )
-
-    attempts = repository.get_trip_attempts(session, trip_id)
+        raise _not_found("Trip not found")
     return TripDetailData(
-        id=trip["id"],
-        user_id=trip["user_id"],
-        title=trip["title"],
-        attempts=[_map_attempt(attempt) for attempt in attempts],
+        id=trip.id,
+        title=trip.title,
+        attempts=[_map_attempt(a) for a in repo.attempts(trip_id, uid)],
     )
 
 
 def update_trip(
-    session: Session,
-    trip_id: UUID,
-    title: str,
+    repo: TripRepository, uid: str, trip_id: UUID, title: str
 ) -> TripListItemData:
-    trip = repository.get_trip(session, trip_id)
+    trip = repo.update_title(trip_id, uid, title)
     if trip is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
-        )
-
-    updated_trip = repository.update_trip_title(session, trip_id, title)
-    if updated_trip is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
-        )
-
-    current_attempt = repository.get_current_trip_attempt(session, trip_id)
-
+        raise _not_found("Trip not found")
+    current = repo.current_attempt(trip_id, uid)
     return TripListItemData(
-        id=updated_trip["id"],
-        user_id=updated_trip["user_id"],
-        title=updated_trip["title"],
-        current_attempt=(
-            _map_current_attempt(current_attempt)
-            if current_attempt is not None
-            else None
-        ),
+        id=trip.id,
+        title=trip.title,
+        current_attempt=_map_current(current) if current else None,
     )
 
 
 def create_trip_attempt(
-    session: Session,
-    trip_id: UUID,
-    attempt_status: TripAttemptStatus,
+    repo: TripRepository, uid: str, trip_id: UUID, attempt_status: TripAttemptStatus
 ) -> TripAttemptMutationData:
-    trip = repository.get_trip(session, trip_id)
-    if trip is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
-        )
-
-    return _map_attempt_mutation(
-        repository.create_trip_attempt(session, trip_id, attempt_status)
-    )
+    attempt = repo.create_attempt(trip_id, uid, attempt_status)
+    if attempt is None:
+        raise _not_found("Trip not found")
+    return _map_mutation(attempt)
 
 
 def update_trip_attempt(
-    session: Session,
+    repo: TripRepository,
+    uid: str,
     trip_id: UUID,
     attempt_id: UUID,
     attempt_status: TripAttemptStatus | None,
     feedback_text: str | None,
 ) -> TripAttemptMutationData:
-    trip = repository.get_trip(session, trip_id)
-    if trip is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
-        )
-
-    attempt = repository.update_trip_attempt(
-        session,
-        trip_id,
-        attempt_id,
-        attempt_status,
-        feedback_text,
+    if repo.get(trip_id, uid) is None:
+        raise _not_found("Trip not found")
+    attempt = repo.update_attempt(
+        trip_id, attempt_id, uid, attempt_status, feedback_text
     )
     if attempt is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Trip attempt not found",
-        )
-
-    return _map_attempt_mutation(attempt)
+        raise _not_found("Trip attempt not found")
+    return _map_mutation(attempt)
 
 
-def update_trip_attempt_feedback(
-    session: Session,
-    trip_id: UUID,
-    attempt_id: UUID,
-    feedback_text: str,
-) -> TripAttemptMutationData:
-    return update_trip_attempt(
-        session,
-        trip_id,
-        attempt_id,
-        attempt_status=None,
-        feedback_text=feedback_text,
-    )
-
-
-def _map_trip_list_item(row: object) -> TripListItemData:
+def _map_list_item(row: TripListRecord) -> TripListItemData:
     return TripListItemData(
-        id=row["id"],
-        user_id=row["user_id"],
-        title=row["title"],
-        current_attempt=(
-            CurrentTripAttemptData(
-                id=row["current_attempt_id"],
-                status=row["current_attempt_status"],
-                feedback_text=row["current_attempt_feedback_text"],
-            )
-            if row["current_attempt_id"] is not None
-            else None
-        ),
+        id=row.trip.id,
+        title=row.trip.title,
+        current_attempt=_map_current(row.current_attempt)
+        if row.current_attempt
+        else None,
     )
 
 
-def _map_current_attempt(row: object) -> CurrentTripAttemptData:
+def _map_current(row: AttemptRecord) -> CurrentTripAttemptData:
     return CurrentTripAttemptData(
-        id=row["id"],
-        status=row["status"],
-        feedback_text=row["feedback_text"],
+        id=row.id, status=row.status, feedback_text=row.feedback_text
     )
 
 
-def _map_attempt(row: object) -> TripAttemptData:
+def _map_attempt(row: AttemptRecord) -> TripAttemptData:
     return TripAttemptData(
-        id=row["id"],
-        trip_id=row["trip_id"],
-        status=row["status"],
-        feedback_text=row["feedback_text"],
-        created_at=row["created_at"],
+        id=row.id,
+        trip_id=row.trip_id,
+        status=row.status,
+        feedback_text=row.feedback_text,
+        created_at=row.created_at,
     )
 
 
-def _map_attempt_mutation(row: object) -> TripAttemptMutationData:
+def _map_mutation(row: AttemptRecord) -> TripAttemptMutationData:
     return TripAttemptMutationData(
-        id=row["id"],
-        trip_id=row["trip_id"],
-        status=row["status"],
-        feedback_text=row["feedback_text"],
+        id=row.id,
+        trip_id=row.trip_id,
+        status=row.status,
+        feedback_text=row.feedback_text,
     )
+
+
+def _not_found(detail: str) -> HTTPException:
+    return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)

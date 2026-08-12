@@ -1,15 +1,17 @@
 # Directions API 계약
 
-변경일: 2026-07-25
-변경 브랜치: `feat/29-directions`
+변경일: 2026-08-12
 
 기본 경로는 `/api/v1/directions`다. 프론트가 전달한 출발지 좌표와 Place DB의
 목적지 좌표를 이용해 경로를 검색한다.
 
-현재 구현은 외부 길찾기 공급자 연동 전의 Mock 구현이다. 두 좌표 사이의 직선
-거리와 이동 수단별 평균 속도로 예상 시간을 계산하고, 지도 표시를 검증할 수
-있도록 꺾이는 Mock 경로 좌표를 반환한다. 응답 계약은 실제 공급자 연동 후에도
-유지한다.
+이 API는 인증이 필요 없는 공개 API다. `feat/33-cloud-sql-firebase-auth`에
+병합하면서 장소 조회를 PostGIS repository로 연결했지만 아래 요청·응답 계약은
+`feat/29-directions`와 동일하게 유지했다.
+
+현재 구현은 외부 길찾기 공급자 연동 전의 ODsay-compatible Mock 구현이다. Mock
+client가 ODsay 형태의 거리·시간·경로 데이터를 반환하고, backend가 이를 공통 응답
+형태로 변환한다. 응답 계약은 실제 공급자 연동 후에도 유지한다.
 
 공급자는 `DIRECTIONS_PROVIDER` 환경변수로 선택한다. 현재는 `mock`만 구현되어
 있으며 `odsay` 설정과 API 호출 구현은 후속 작업에서 추가한다.
@@ -114,6 +116,8 @@ Content-Type: application/json
 - `geometry.coordinates`는 출발점과 도착점을 포함하며 최소 2개다.
 - Mock 좌표는 ODsay `loadLane` 응답을 연결한 폴리라인처럼 중간 꺾임점을 포함한다.
 - 현재 `provider`는 `mock`이다.
+- FE는 `provider` 값이나 후보 경로 수를 고정해서 가정하지 않는다. 현재 화면에서
+  한 경로만 표시할 때는 `routes[0]`을 사용한다.
 
 ## 오류
 

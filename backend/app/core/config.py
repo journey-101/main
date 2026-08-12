@@ -5,12 +5,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    postgres_user: str = "app"
-    postgres_password: str = "app_password"
-    postgres_db: str = "journey101"
-    postgres_host: str = "postgres"
-    postgres_port: int = 5432
-    database_url: str | None = None
+    database_url: str = (
+        "postgresql+psycopg://app:app_password@localhost:5432/journey101"
+    )
+    database_pool_size: int = 5
+    database_max_overflow: int = 10
+    database_pool_timeout: int = 30
+    google_cloud_project: str = "journey101-local"
     cors_allowed_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     cors_allow_credentials: bool = False
     directions_provider: Literal["mock", "odsay"] = "mock"
@@ -21,14 +22,7 @@ class Settings(BaseSettings):
 
     @property
     def resolved_database_url(self) -> str:
-        if self.database_url:
-            return self.database_url
-
-        return (
-            "postgresql+psycopg://"
-            f"{self.postgres_user}:{self.postgres_password}"
-            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
-        )
+        return self.database_url
 
     @property
     def resolved_cors_allowed_origins(self) -> list[str]:

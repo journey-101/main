@@ -21,14 +21,16 @@ async def test_cors_preflight_allows_configured_frontend_origin() -> None:
             headers={
                 "Origin": "http://localhost:5173",
                 "Access-Control-Request-Method": "GET",
-                "Access-Control-Request-Headers": "Accept, Content-Type",
+                "Access-Control-Request-Headers": "Accept, Authorization, Content-Type",
             },
         )
 
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
-    assert response.headers["access-control-allow-methods"] == (
-        "GET, POST, PUT, DELETE, OPTIONS"
+    allowed_methods = response.headers["access-control-allow-methods"]
+    assert all(
+        method in allowed_methods
+        for method in ("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
     )
     allow_headers = response.headers["access-control-allow-headers"]
     assert "Accept" in allow_headers
