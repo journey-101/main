@@ -5,6 +5,7 @@
 ## 바로가기
 
 - [Authentication API](./auth.md)
+- [Directions API](./directions.md)
 - [Health API](./health.md)
 - [Places API](./places.md)
 - [Recommendations API](./recommendations.md)
