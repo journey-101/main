@@ -1,7 +1,10 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from app.domains.recommendations.schemas import RecommendationItemData, UserPreferenceData
+from app.domains.recommendations.schemas import (
+    RecommendationItemData,
+    UserPreferenceData,
+)
 
 
 @dataclass(frozen=True)
@@ -19,7 +22,9 @@ def score_places(
 ) -> list[RecommendationItemData]:
     scored = [_score_place(preference, candidate) for candidate in candidates]
     scored.sort(key=lambda item: (-item.score, item.place_name, str(item.place_id)))
-    return [item.model_copy(update={"rank": rank}) for rank, item in enumerate(scored, 1)]
+    return [
+        item.model_copy(update={"rank": rank}) for rank, item in enumerate(scored, 1)
+    ]
 
 
 def _score_place(

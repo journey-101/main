@@ -34,20 +34,19 @@ class TripAttemptMutationData(BaseModel):
 
 class TripListItemData(BaseModel):
     id: UUID
-    user_id: UUID
     title: str
     current_attempt: CurrentTripAttemptData | None
 
 
 class TripDetailData(BaseModel):
     id: UUID
-    user_id: UUID
     title: str
     attempts: list[TripAttemptData]
 
 
 class CreateTripRequest(BaseModel):
-    user_id: UUID
+    model_config = ConfigDict(extra="forbid")
+
     title: str
 
 

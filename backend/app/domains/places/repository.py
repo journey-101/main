@@ -1,24 +1,37 @@
-from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import Protocol
 from uuid import UUID
 
-from sqlalchemy import RowMapping, text
-from sqlalchemy.orm import Session
+
+@dataclass(frozen=True)
+class PlaceRecord:
+    id: UUID
+    provider: str
+    provider_place_id: str
+    name: str
+    category: str
+    tags: list[str]
+    address: str
+    region_code: str
+    lat: float
+    lng: float
+    opening_hours: dict[str, str]
+    price_level: int
+    phone: str | None
+    source_url: str
 
 
-PLACE_COLUMNS = """
-    id, provider, provider_place_id, name, category, tags, address,
-    region_code, lat, lng, opening_hours, price_level, phone, source_url
-"""
+@dataclass(frozen=True)
+class PlaceSearch:
+    keyword: str | None = None
+    region_code: str | None = None
+    category: str | None = None
+    lat: float | None = None
+    lng: float | None = None
+    radius_m: int | None = None
+    limit: int = 20
 
 
-def list_places(session: Session) -> Sequence[RowMapping]:
-    result = session.execute(text(f"select {PLACE_COLUMNS} from places order by id"))
-    return result.mappings().all()
-
-
-def get_place(session: Session, place_id: UUID) -> RowMapping | None:
-    result = session.execute(
-        text(f"select {PLACE_COLUMNS} from places where id = :place_id"),
-        {"place_id": str(place_id)},
-    )
-    return result.mappings().one_or_none()
+class PlaceRepository(Protocol):
+    def search(self, query: PlaceSearch) -> list[PlaceRecord]: ...
+    def get(self, place_id: UUID) -> PlaceRecord | None: ...
